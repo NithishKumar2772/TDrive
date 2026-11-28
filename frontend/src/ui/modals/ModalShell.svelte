@@ -12,6 +12,7 @@
         titleId: string;
         subtitle?: string;
         lang?: string;
+        dir?: 'ltr' | 'rtl';
         cardClass?: string;
         // actionsClass restyles the footer wrapper for dialogs whose design
         // system class differs from the default .modal-actions.
@@ -40,6 +41,7 @@
         titleId,
         subtitle = '',
         lang,
+        dir,
         cardClass = '',
         actionsClass = 'modal-actions',
         presentation,
@@ -355,6 +357,7 @@
         class:is-dragging={dragging}
         role="dialog"
         {lang}
+        {dir}
         aria-modal="true"
         aria-labelledby={titleId}
     >

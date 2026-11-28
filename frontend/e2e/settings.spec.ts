@@ -80,3 +80,57 @@ test('Mount saves the Windows drive letter for the next mount', async ({ page })
     await expect(letter).toHaveValue('Q:');
     await expect.poll(async () => (await mock.calls('SetMountDriveLetter')).map((call) => call.args)).toEqual([['Q:']]);
 });
+
+test('Arabic mirrors Settings and keeps the selected language after reload', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await bootTDrive(page);
+    await openSettingsSection(page, 'Language');
+
+    const dialog = page.locator('#settings-modal [role="dialog"]');
+    const language = dialog.locator('#settings-language');
+    await language.selectOption('ar');
+    await expect(dialog).toHaveAttribute('lang', 'ar');
+    await expect(dialog).toHaveCSS('direction', 'rtl');
+    const nav = dialog.getByRole('navigation');
+    const content = dialog.getByRole('region');
+    const rtlNav = await nav.boundingBox();
+    const rtlContent = await content.boundingBox();
+    if (!rtlNav || !rtlContent) throw new Error('Settings layout did not render');
+    expect(rtlNav.x).toBeGreaterThan(rtlContent.x);
+
+    await nav.locator('#settings-nav-appearance').click();
+    const englishPanel = dialog.locator('.settings-body');
+    await expect(englishPanel).toHaveAttribute('lang', 'en');
+    await expect(englishPanel).toHaveCSS('direction', 'ltr');
+    await expect(englishPanel.getByRole('radiogroup', { name: 'Light theme' })).toBeVisible();
+
+    await nav.locator('#settings-nav-encryption').click();
+    const encrypt = dialog.getByRole('switch');
+    const track = encrypt.locator('.ui-switch');
+    const thumb = track.locator('.ui-switch-thumb');
+    await expect(encrypt).toHaveAttribute('aria-checked', 'false');
+    const unchecked = await thumb.boundingBox();
+    await encrypt.click();
+    await expect(encrypt).toHaveAttribute('aria-checked', 'true');
+    const checked = await thumb.boundingBox();
+    const trackBounds = await track.boundingBox();
+    if (!unchecked || !checked || !trackBounds) throw new Error('Encryption switch did not render');
+    expect(checked.x).toBeLessThan(unchecked.x);
+    expect(checked.x).toBeGreaterThanOrEqual(trackBounds.x);
+    expect(checked.x + checked.width).toBeLessThanOrEqual(trackBounds.x + trackBounds.width);
+
+    await page.reload();
+    await page.locator('#profile-trigger').click();
+    await page.getByRole('menuitem', { name: 'Settings…' }).click();
+    await expect(dialog).toHaveAttribute('lang', 'ar');
+    await nav.locator('#settings-nav-language').click();
+    await expect(language).toHaveValue('ar');
+
+    await language.selectOption('en');
+    await expect(dialog).toHaveAttribute('lang', 'en');
+    await expect(dialog).toHaveCSS('direction', 'ltr');
+    const ltrNav = await nav.boundingBox();
+    const ltrContent = await content.boundingBox();
+    if (!ltrNav || !ltrContent) throw new Error('Settings layout did not render');
+    expect(ltrNav.x).toBeLessThan(ltrContent.x);
+});

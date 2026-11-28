@@ -104,6 +104,35 @@ describe('SettingsWindow', () => {
         expect(theme?.closest('[lang]')?.getAttribute('lang')).toBe('en');
     });
 
+    it('switches the named dialog to Arabic and labels the picker options in their own languages', async () => {
+        setLocalePreference('en');
+        setup();
+        openSettings('language');
+        await settle();
+
+        const language = host?.querySelector<HTMLSelectElement>('#settings-language');
+        if (!language) throw new Error('language selector did not render');
+        const arabic = language.querySelector('option[value="ar"]');
+        const english = language.querySelector('option[value="en"]');
+        expect(arabic?.textContent).toBe('العربية');
+        expect(arabic?.getAttribute('lang')).toBe('ar');
+        expect(arabic?.getAttribute('dir')).toBe('rtl');
+        expect(english?.textContent).toBe('English');
+        expect(english?.getAttribute('lang')).toBe('en');
+        expect(english?.getAttribute('dir')).toBe('ltr');
+
+        language.value = 'ar';
+        language.dispatchEvent(new Event('change', { bubbles: true }));
+        await settle();
+
+        const dialog = host?.querySelector('[role="dialog"][aria-labelledby="settings-title"]');
+        expect(dialog?.getAttribute('lang')).toBe('ar');
+        expect(dialog?.getAttribute('dir')).toBe('rtl');
+        expect(host?.querySelector('#settings-title')?.textContent).toMatch(/\p{Script=Arabic}/u);
+        expect(language.querySelector('option[value="system"]')?.textContent).toMatch(/\p{Script=Arabic}/u);
+        expect(english?.textContent).toBe('English');
+    });
+
     it('labels the Updates ready indicator in the selected language', async () => {
         setLocalePreference('zh-TW');
         updateState.set({ ...initialUpdateState(), phase: 'ready' });

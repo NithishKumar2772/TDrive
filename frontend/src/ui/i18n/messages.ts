@@ -1,90 +1,37 @@
-export const messages = {
-    en: {
-        settings: 'Settings',
-        account: 'Account',
-        appearance: 'Appearance',
-        photoBackup: 'Photo backup',
-        encryption: 'Encryption',
-        mount: 'Mount',
-        updates: 'Updates',
-        updateReady: 'Update ready',
-        language: 'Language',
-        languageDescription: 'Choose the language used by the interface.',
-        systemDefault: 'System default',
-        english: 'English',
-        simplifiedChinese: '简体中文',
-        traditionalChinese: '繁體中文',
-        closeSettings: 'Close settings',
-        loadingAccount: 'Loading account…',
-        telegramAccount: 'Telegram account',
-        logOut: 'Log out',
-        logOutDescription: 'Sign this device out of Telegram. Your files stay in your Telegram account.',
-        encryptUploads: 'Encrypt uploads',
-        encryptUploadsDescription: 'New uploads to My Drive are encrypted with your password. Names and folders stay visible.',
-        passwordAndDeviceUnlock: 'Password and device unlock',
-        changeEncryptionPassword: 'Change your encryption password and hint, or unlock with this device.',
-        setEncryptionPassword: 'You set a password the first time you encrypt an upload.',
-        manage: 'Manage…',
-    },
-    'zh-CN': {
-        settings: '设置',
-        account: '账户',
-        appearance: '外观',
-        photoBackup: '照片备份',
-        encryption: '加密',
-        mount: '挂载',
-        updates: '更新',
-        updateReady: '更新已就绪',
-        language: '语言',
-        languageDescription: '选择界面使用的语言。',
-        systemDefault: '跟随系统',
-        english: '英语',
-        simplifiedChinese: '简体中文',
-        traditionalChinese: '繁體中文',
-        closeSettings: '关闭设置',
-        loadingAccount: '正在加载账户…',
-        telegramAccount: 'Telegram 账户',
-        logOut: '退出登录',
-        logOutDescription: '从此设备退出 Telegram。您的文件仍保留在 Telegram 账户中。',
-        encryptUploads: '加密上传内容',
-        encryptUploadsDescription: '上传到“我的云盘”的新文件将使用您的密码加密。文件名和文件夹仍然可见。',
-        passwordAndDeviceUnlock: '密码和设备解锁',
-        changeEncryptionPassword: '更改加密密码和提示，或使用此设备解锁。',
-        setEncryptionPassword: '首次加密上传文件时，您需要设置密码。',
-        manage: '管理…',
-    },
-    'zh-TW': {
-        settings: '設定',
-        account: '帳戶',
-        appearance: '外觀',
-        photoBackup: '相片備份',
-        encryption: '加密',
-        mount: '掛載',
-        updates: '更新',
-        updateReady: '更新已就緒',
-        language: '語言',
-        languageDescription: '選擇介面使用的語言。',
-        systemDefault: '跟隨系統',
-        english: '英文',
-        simplifiedChinese: '简体中文',
-        traditionalChinese: '繁體中文',
-        closeSettings: '關閉設定',
-        loadingAccount: '正在載入帳戶…',
-        telegramAccount: 'Telegram 帳戶',
-        logOut: '登出',
-        logOutDescription: '從此裝置登出 Telegram。您的檔案仍會保留在 Telegram 帳戶中。',
-        encryptUploads: '加密上傳內容',
-        encryptUploadsDescription: '上傳到「我的雲端硬碟」的新檔案將使用您的密碼加密。檔名和資料夾仍然可見。',
-        passwordAndDeviceUnlock: '密碼與裝置解鎖',
-        changeEncryptionPassword: '變更加密密碼和提示，或使用此裝置解鎖。',
-        setEncryptionPassword: '首次加密上傳檔案時，您需要設定密碼。',
-        manage: '管理…',
-    },
-} as const;
+import { asianCatalogs } from './catalogs/asia';
+import { chineseCatalogs } from './catalogs/chinese';
+import { englishMessages, type LocaleCatalog, type MessageKey } from './catalogs/en';
+import { europeMenaCatalogs } from './catalogs/europe-mena';
+import { westernEuropeanCatalogs } from './catalogs/western-europe';
 
-export type Locale = keyof typeof messages;
-export type MessageKey = keyof typeof messages.en;
+const catalogs = {
+    en: { name: 'English', messages: englishMessages },
+    ...chineseCatalogs,
+    ...westernEuropeanCatalogs,
+    ...europeMenaCatalogs,
+    ...asianCatalogs,
+} satisfies Record<string, LocaleCatalog>;
+
+export type Locale = keyof typeof catalogs;
+export type { MessageKey } from './catalogs/en';
+
+export function isLocale(value: unknown): value is Locale {
+    return typeof value === 'string' && Object.prototype.hasOwnProperty.call(catalogs, value);
+}
+
+export function localeDirection(locale: Locale): 'ltr' | 'rtl' {
+    const catalog: LocaleCatalog = catalogs[locale];
+    return catalog.direction ?? 'ltr';
+}
+
+const localeIds = Object.keys(catalogs) as Locale[];
+
+export const localeOptions = localeIds.map((id) => ({
+    id,
+    name: catalogs[id].name,
+    direction: localeDirection(id),
+}));
 
 export function translate(key: MessageKey, locale: Locale): string {
-    return messages[locale][key] ?? messages.en[key];
+    return catalogs[locale].messages[key];
 }

@@ -22,8 +22,8 @@
     import { checkForUpdates } from '../../modules/updates';
     import { encryptUploads, setEncryptUploads } from '../../modules/upload-preferences';
     import { closeSettings, openSettings, settingsView, showSettingsSection, type SettingsSection } from './settings-store';
-    import { locale, localePreference, setLocalePreference, type LocalePreference } from '../i18n/locale-store';
-    import { translate, type MessageKey } from '../i18n/messages';
+    import { locale, localePreference, setLocalePreference } from '../i18n/locale-store';
+    import { isLocale, localeDirection, localeOptions, translate, type MessageKey } from '../i18n/messages';
 
     interface Props {
         // False on phones, which update through their app stores.
@@ -119,6 +119,7 @@
     open={$settingsView.open}
     titleId="settings-title"
     lang={$locale}
+    dir={localeDirection($locale)}
     cardClass="settings-card"
     presentation="dialog"
     initialFocus={`#settings-nav-${current.id}`}
@@ -141,7 +142,7 @@
                     onkeydown={(event) => moveSectionFocus(event, index)}
                 >
                     <Icon size={16} strokeWidth={2} aria-hidden="true" />
-                    <span>{entry.label}</span>
+                    <span class="settings-nav-label">{entry.label}</span>
                     {#if entry.id === 'updates' && $updateBadge === 'ready'}
                         <span class="settings-nav-dot" role="img" aria-label={translate('updateReady', $locale)}></span>
                     {/if}
@@ -157,14 +158,14 @@
                 </button>
             </header>
 
-            <div class="settings-body" lang={bodyLang}>
+            <div class="settings-body" lang={bodyLang} dir={bodyLang ? 'ltr' : undefined}>
                 {#if current.id === 'account'}
                     <div class="settings-group">
                         <div class="settings-identity">
                             <Avatar user={$profileUser} />
-                            <div>
-                                <div class="settings-identity-name">{displayName}</div>
-                                {#if handle}<div class="settings-identity-handle">@{handle}</div>{/if}
+                            <div class="settings-identity-copy">
+                                <div class="settings-identity-name"><bdi>{displayName}</bdi></div>
+                                {#if handle}<div class="settings-identity-handle"><bdi dir="ltr">@{handle}</bdi></div>{/if}
                             </div>
                         </div>
                     </div>
@@ -209,14 +210,23 @@
                     <div class="settings-group">
                         <div class="settings-row">
                             <div class="settings-row-copy">
-                                <div class="settings-row-title">{translate('language', $locale)}</div>
-                                <div class="settings-row-description">{translate('languageDescription', $locale)}</div>
+                                <label class="settings-row-title" for="settings-language">{translate('language', $locale)}</label>
+                                <div id="settings-language-description" class="settings-row-description">{translate('languageDescription', $locale)}</div>
                             </div>
-                            <select id="settings-language" value={$localePreference} onchange={(event) => setLocalePreference(event.currentTarget.value as LocalePreference)} aria-label={translate('language', $locale)}>
+                            <select
+                                id="settings-language"
+                                class="settings-language-select"
+                                value={$localePreference}
+                                aria-describedby="settings-language-description"
+                                onchange={(event) => {
+                                    const value = event.currentTarget.value;
+                                    if (value === 'system' || isLocale(value)) setLocalePreference(value);
+                                }}
+                            >
                                 <option value="system">{translate('systemDefault', $locale)}</option>
-                                <option value="en">{translate('english', $locale)}</option>
-                                <option value="zh-CN" lang="zh-CN">{translate('simplifiedChinese', $locale)}</option>
-                                <option value="zh-TW" lang="zh-TW">{translate('traditionalChinese', $locale)}</option>
+                                {#each localeOptions as option (option.id)}
+                                    <option value={option.id} lang={option.id} dir={option.direction}>{option.name}</option>
+                                {/each}
                             </select>
                         </div>
                     </div>
@@ -253,9 +263,11 @@
         display: flex;
         flex-direction: column;
         gap: 2px;
+        min-block-size: 0;
+        overflow-y: auto;
         padding: var(--space-4) var(--space-2);
         background: var(--color-canvas);
-        border-right: 1px solid var(--color-border-soft);
+        border-inline-end: 1px solid var(--color-border-soft);
     }
 
     .settings-nav-title {
@@ -279,7 +291,7 @@
         font: inherit;
         font-size: var(--type-sm);
         font-weight: var(--weight-medium);
-        text-align: left;
+        text-align: start;
         cursor: pointer;
         transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
     }
@@ -290,11 +302,14 @@
 
     .settings-nav-item.active { background: var(--color-current-bg); color: var(--color-current-text); }
     .settings-nav-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .settings-nav-item :global(svg) { flex: 0 0 auto; }
+    .settings-nav-label { min-inline-size: 0; overflow-wrap: anywhere; }
 
     .settings-nav-dot {
+        flex: 0 0 auto;
         width: 6px;
         height: 6px;
-        margin-left: auto;
+        margin-inline-start: auto;
         border-radius: 50%;
         background: var(--color-accent);
     }
@@ -310,9 +325,10 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: var(--space-2);
         flex: 0 0 auto;
         min-height: 56px;
-        padding: 0 var(--space-3) 0 var(--space-6);
+        padding-inline: var(--space-6) var(--space-3);
     }
 
     .settings-content-head h3 {
@@ -322,9 +338,10 @@
         font-weight: var(--weight-semibold);
         letter-spacing: -0.01em;
         outline: none;
+        overflow-wrap: anywhere;
     }
 
-    .settings-close { color: var(--color-text-muted); }
+    .settings-close { flex: 0 0 auto; color: var(--color-text-muted); }
 
     .settings-body {
         flex: 1 1 auto;
@@ -352,11 +369,27 @@
         padding: 12px 16px;
     }
 
-    .settings-row-copy { min-width: 0; }
+    .settings-row-copy { min-inline-size: 0; overflow-wrap: anywhere; }
     .settings-row-title { color: var(--color-text); font-size: var(--type-sm); font-weight: var(--weight-medium); }
     .settings-row-description { margin-top: 2px; color: var(--color-text-muted); font-size: var(--type-xs); line-height: 1.45; }
     .settings-row .secondary-btn { flex: 0 0 auto; min-height: var(--control-md); padding: 0 var(--space-3); }
     .settings-danger { color: var(--color-danger); }
+
+    .settings-language-select {
+        min-inline-size: 0;
+        max-inline-size: min(45%, 16rem);
+        min-block-size: var(--control-md);
+        padding-inline: var(--space-2);
+        border: 1px solid var(--color-border-soft);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface-1);
+        color: var(--color-text);
+        font: inherit;
+        font-size: var(--type-sm);
+        cursor: pointer;
+    }
+
+    .settings-language-select:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
     .settings-identity {
         display: flex;
@@ -365,6 +398,7 @@
         padding: 14px 16px;
     }
 
+    .settings-identity-copy { min-inline-size: 0; overflow-wrap: anywhere; }
     .settings-identity-name { color: var(--color-text); font-size: var(--type-base); font-weight: var(--weight-semibold); }
     .settings-identity-handle { margin-top: 2px; color: var(--color-text-muted); font-size: var(--type-sm); }
 </style>

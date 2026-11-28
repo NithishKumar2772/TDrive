@@ -53,7 +53,7 @@
         background: transparent;
         color: var(--text-main);
         font: inherit;
-        text-align: left;
+        text-align: start;
         cursor: pointer;
     }
 
@@ -119,12 +119,12 @@
         border-radius: 50%;
         background: #fff;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-        transform: translateX(0);
-        transition: transform var(--motion-med) var(--ease-standard);
+        margin-inline-start: 0;
+        transition: margin-inline-start var(--motion-med) var(--ease-standard);
     }
 
     .ui-switch-row[aria-checked='true'] .ui-switch-thumb {
-        transform: translateX(14px);
+        margin-inline-start: 14px;
     }
 
     @media (prefers-reduced-motion: reduce) {
