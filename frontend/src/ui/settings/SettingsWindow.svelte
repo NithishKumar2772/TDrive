@@ -51,6 +51,10 @@
         return true;
     }));
     const current = $derived(sections.find((entry) => entry.id === $settingsView.section) ?? sections[0]);
+    // The embedded panels still render English copy.
+    const bodyLang = $derived(
+        current.id === 'account' || current.id === 'encryption' || current.id === 'language' ? undefined : 'en',
+    );
     const displayName = $derived(!$profileLoaded ? translate('loadingAccount', $locale) : $profileUser?.displayName || translate('telegramAccount', $locale));
     const handle = $derived(($profileUser?.username || '').trim());
 
@@ -114,6 +118,7 @@
     hostId="settings-modal"
     open={$settingsView.open}
     titleId="settings-title"
+    lang={$locale}
     cardClass="settings-card"
     presentation="dialog"
     initialFocus={`#settings-nav-${current.id}`}
@@ -138,7 +143,7 @@
                     <Icon size={16} strokeWidth={2} aria-hidden="true" />
                     <span>{entry.label}</span>
                     {#if entry.id === 'updates' && $updateBadge === 'ready'}
-                        <span class="settings-nav-dot" aria-label="Update ready"></span>
+                        <span class="settings-nav-dot" role="img" aria-label={translate('updateReady', $locale)}></span>
                     {/if}
                 </button>
             {/each}
@@ -152,7 +157,7 @@
                 </button>
             </header>
 
-            <div class="settings-body">
+            <div class="settings-body" lang={bodyLang}>
                 {#if current.id === 'account'}
                     <div class="settings-group">
                         <div class="settings-identity">
@@ -210,8 +215,8 @@
                             <select id="settings-language" value={$localePreference} onchange={(event) => setLocalePreference(event.currentTarget.value as LocalePreference)} aria-label={translate('language', $locale)}>
                                 <option value="system">{translate('systemDefault', $locale)}</option>
                                 <option value="en">{translate('english', $locale)}</option>
-                                <option value="zh-CN">{translate('simplifiedChinese', $locale)}</option>
-                                <option value="zh-TW">{translate('traditionalChinese', $locale)}</option>
+                                <option value="zh-CN" lang="zh-CN">{translate('simplifiedChinese', $locale)}</option>
+                                <option value="zh-TW" lang="zh-TW">{translate('traditionalChinese', $locale)}</option>
                             </select>
                         </div>
                     </div>

@@ -18,6 +18,8 @@ import SettingsWindow from './SettingsWindow.svelte';
 import { openSettings, settingsView } from './settings-store';
 import { setPreferredTheme, setThemeMode, THEME_TRANSITION_CLASS, themeController } from '../theme/theme-controller';
 import { setLocalePreference } from '../i18n/locale-store';
+import { initialUpdateState } from '../updates/update-model';
+import { updateState } from '../updates/update-store';
 
 let component: Record<string, unknown> | null = null;
 let host: HTMLElement | null = null;
@@ -57,6 +59,7 @@ afterEach(async () => {
     host = null;
     settingsView.set({ open: false, section: 'account' });
     setLocalePreference('system');
+    updateState.set(initialUpdateState());
     vi.mocked(checkForUpdates).mockClear();
 });
 
@@ -72,15 +75,44 @@ describe('SettingsWindow', () => {
         language.dispatchEvent(new Event('change', { bubbles: true }));
         await settle();
 
+        const dialog = host?.querySelector('[role="dialog"][aria-labelledby="settings-title"]');
+        expect(dialog?.getAttribute('lang')).toBe('zh-CN');
         expect(host?.querySelector('#settings-title')?.textContent).toBe('设置');
         expect(host?.querySelector('#settings-nav-account')?.textContent).toContain('账户');
+        expect(language.querySelector('option[value="zh-CN"]')?.getAttribute('lang')).toBe('zh-CN');
+        expect(language.querySelector('option[value="zh-TW"]')?.getAttribute('lang')).toBe('zh-TW');
 
         language.value = 'zh-TW';
         language.dispatchEvent(new Event('change', { bubbles: true }));
         await settle();
 
+        expect(dialog?.getAttribute('lang')).toBe('zh-TW');
         expect(host?.querySelector('#settings-title')?.textContent).toBe('設定');
         expect(host?.querySelector('#settings-nav-account')?.textContent).toContain('帳戶');
+    });
+
+    it('keeps untranslated panels in English when Settings uses Chinese', async () => {
+        setLocalePreference('zh-TW');
+        setup();
+        openSettings('appearance');
+        await settle();
+
+        const title = host?.querySelector('#settings-section-title');
+        const theme = host?.querySelector('[role="radiogroup"][aria-label="Light theme"]');
+        expect(title?.textContent).toBe('外觀');
+        expect(title?.closest('[lang]')?.getAttribute('lang')).toBe('zh-TW');
+        expect(theme?.closest('[lang]')?.getAttribute('lang')).toBe('en');
+    });
+
+    it('labels the Updates ready indicator in the selected language', async () => {
+        setLocalePreference('zh-TW');
+        updateState.set({ ...initialUpdateState(), phase: 'ready' });
+        setup();
+        openSettings('account');
+        await settle();
+
+        const indicator = host?.querySelector('#settings-nav-updates [role="img"]');
+        expect(indicator?.getAttribute('aria-label')).toBe('更新已就緒');
     });
 
     it('opens with the keyboard shortcut on the section shown last', async () => {
