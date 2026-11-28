@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const expectedMaxImportItems = 100_000
+const expectedMaxImportItems = 10_000
 
 var ignoredImportDirectories = []string{
 	".git",

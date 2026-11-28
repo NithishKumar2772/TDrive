@@ -1175,7 +1175,7 @@ async function importAndroidFolder(parentID: string, destination: UploadDestinat
         const planFor = (encrypt: boolean): ImportPlan => ({ files: manifest.files.length - (encrypt ? 0 : emptyFiles),
             folders: folderPathsFor(manifest).length, bytes: manifest.files.reduce((sum, file) => sum + file.size, 0),
             oversize: 0, empty: encrypt ? 0 : emptyFiles, archives: 0, ignored: 0,
-            maxBytes: 0, maxItems: 100_000, limitExceeded: manifest.files.length > 100_000, errorCount: 0, errors: [] });
+            maxBytes: 0, maxItems: 10_000, limitExceeded: manifest.files.length > 10_000, errorCount: 0, errors: [] });
         const encryptDefault = destination.personal && get(encryptUploads) === true;
         const plan = planFor(encryptDefault);
         if (destination.personal) await loadEncryptionStatus();

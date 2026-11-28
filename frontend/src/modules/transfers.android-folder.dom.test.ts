@@ -149,19 +149,6 @@ afterEach(() => {
 });
 
 describe('uploading an Android folder a window at a time', () => {
-    it('accepts selections above 10,000 items up to the shared 100,000-item limit', async () => {
-        manifestJson = manifestOf('Large folder', Array.from({ length: 10_001 }, (_, index) => `file-${index}.bin'));
-        mocks.openImportOptionsModal.mockResolvedValue(null);
-
-        await importFolderWithParentID('root');
-
-        expect(mocks.openImportOptionsModal).toHaveBeenCalledWith(expect.objectContaining({
-            plan: expect.objectContaining({ maxItems: 100_000, limitExceeded: false, files: 10_001 }),
-        }));
-        expect(mocks.notify).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Selection is too large' }));
-        expect(materialized).toEqual([]);
-    });
-
     it('copies, uploads and releases four files at a time', async () => {
         manifestJson = manifestOf('Holiday', ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']);
 
