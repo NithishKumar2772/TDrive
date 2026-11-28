@@ -298,7 +298,10 @@ describe('bounded photo viewer', () => {
         ['structured rejection', { message: ' no image available ' }, 'no image available'],
         ['unknown rejection', null, 'Download failed'],
     ])('shows a useful error without a thumbnail for %s', async (_name, failure, message) => {
-        mocks.acquire.mockReturnValue({ promise: Promise.reject(new Error('missing thumbnail')), release: mocks.release });
+        mocks.acquire.mockImplementation(() => ({
+            promise: Promise.reject(new Error('missing thumbnail')),
+            release: mocks.release,
+        }));
         mocks.openOriginal.mockRejectedValue(failure);
         const preview = await import('./preview');
         preview.activatePreviewModal();
