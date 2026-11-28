@@ -2,7 +2,10 @@
     import ClockIcon from '@lucide/svelte/icons/clock';
     import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
     import FolderIcon from '@lucide/svelte/icons/folder';
+    import { isMobilePlatform } from '../../api';
     import type { DriveChannel, PendingJoin } from '../../types';
+    import { locale } from '../i18n/locale-store';
+    import { workspaceText } from '../i18n/workspace-messages';
     import { contextMenuState } from '../menus/context-menu-store';
     import { sidebarState, type SidebarActionMenuRequest } from './sidebar-store';
     import { openChannelKey } from '../channels/channel-store';
@@ -26,6 +29,8 @@
         onPendingActions,
     }: Props = $props();
 
+    const mobile = isMobilePlatform();
+    const displayLocale = $derived(mobile ? 'en' : $locale);
     let activeActionKey = $state<string | null>(null);
     let returnFocusTo = $state<HTMLElement | null>(null);
     let menuOpenedByThisList = $state(false);
@@ -49,7 +54,7 @@
     });
 
     function titleFor(channel: DriveChannel): string {
-        return channel.title || 'Untitled';
+        return channel.title || workspaceText('untitled', displayLocale);
     }
 
     function pendingTitleFor(pending: PendingJoin): string {
@@ -143,7 +148,7 @@
 
 {#if kind === 'personal'}
     {#if $sidebarState.personal.length === 0}
-        <div class="drive-empty">Loading...</div>
+        <div class="drive-empty" lang={displayLocale}>{workspaceText('loading', displayLocale)}</div>
     {:else}
         {#each $sidebarState.personal as channel (channel.id)}
             <button
@@ -152,6 +157,7 @@
                 class:active={isActiveDrive(channel)}
                 data-channel-id={channel.id}
                 title={titleFor(channel)}
+                lang={channel.title ? undefined : displayLocale}
                 aria-current={isActiveDrive(channel) ? 'page' : undefined}
                 onclick={() => onDriveClick(channel.id)}
             >
@@ -161,13 +167,14 @@
         {/each}
     {/if}
 {:else if $sidebarState.shared.length === 0 && $sidebarState.pending.length === 0}
-    <div class="drive-empty">No shared drives yet</div>
+    <div class="drive-empty" lang={displayLocale}>{workspaceText('noSharedDrives', displayLocale)}</div>
 {:else}
     {#each $sidebarState.shared as channel (channel.id)}
         <div
             class="sidebar-drive-row"
             role="group"
             aria-label={titleFor(channel)}
+            lang={channel.title ? undefined : displayLocale}
             oncontextmenu={(event) => actionsFromContextMenu(event, driveActionKey(channel), channel, onDriveActions)}
         >
             <button
@@ -188,6 +195,7 @@
                     class="drive-actions-trigger"
                     aria-label={`Actions for ${titleFor(channel)}`}
                     title={`Actions for ${titleFor(channel)}`}
+                    lang="en"
                     aria-haspopup="menu"
                     aria-expanded={activeActionKey === driveActionKey(channel) && $contextMenuState.open ? 'true' : 'false'}
                     onclick={(event) => actionsFromButton(event, driveActionKey(channel), channel, onDriveActions)}
@@ -203,6 +211,7 @@
             class="sidebar-drive-row"
             role="group"
             aria-label={pendingTitleFor(pending)}
+            lang="en"
             oncontextmenu={(event) => actionsFromContextMenu(event, pendingActionKey(pending), pending, onPendingActions)}
         >
             <button

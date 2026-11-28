@@ -9,6 +9,8 @@
     import ResumableUploadRow from './ResumableUploadRow.svelte';
     import ResumableDownloadRow from './ResumableDownloadRow.svelte';
     import { resumableDownloads } from '../../modules/resumable-downloads';
+    import { locale } from '../i18n/locale-store';
+    import { workspaceText } from '../i18n/workspace-messages';
     import { hasActiveModal } from '../modals/modal-a11y';
     import { portal } from './portal';
     import { activityView, closeActivity, openActivity } from './activity-store';
@@ -75,8 +77,9 @@
               ? $resumableUploads.length + $resumableDownloads.length > 0
                   ? `Notifications, ${activeCount} transfer${activeCount === 1 ? '' : 's'} in progress or waiting`
                   : `Notifications, ${activeCount} transfer${activeCount === 1 ? '' : 's'} in progress`
-              : 'Notifications',
+              : workspaceText('notifications', $locale),
     );
+    const bellLanguage = $derived($bellMode === 'error' || activeCount > 0 ? 'en' : $locale);
 
     function reanchor(): void {
         if (!bellEl) return;
@@ -219,6 +222,7 @@
     aria-controls={$notifPanelOpen ? 'notif-panel' : 'activity-modal'}
     aria-expanded={$notifPanelOpen || $activityView.open ? 'true' : 'false'}
     aria-label={bellLabel}
+    lang={bellLanguage}
     onclick={(event) => {
         event.stopPropagation();
         toggleActivity();
@@ -242,6 +246,7 @@
         role="dialog"
         aria-modal="false"
         aria-labelledby="notif-panel-title"
+        lang="en"
         tabindex="-1"
         style={`top:${anchor.top}px; right:${anchor.right}px;`}
         use:portal
@@ -251,7 +256,7 @@
         onclick={(event) => event.stopPropagation()}
     >
         <div class="notif-panel-header">
-            <h2 id="notif-panel-title" class="notif-panel-title">Notifications</h2>
+            <h2 id="notif-panel-title" class="notif-panel-title" lang={$locale}>{workspaceText('notifications', $locale)}</h2>
             <div class="notif-panel-actions">
                 <button
                     class="notif-panel-clear"

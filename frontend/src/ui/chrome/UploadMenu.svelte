@@ -6,6 +6,8 @@
     import XIcon from '@lucide/svelte/icons/x';
     import { tick } from 'svelte';
     import { isMobilePlatform } from '../../api';
+    import { locale } from '../i18n/locale-store';
+    import { workspaceText } from '../i18n/workspace-messages';
     import { prefersReducedMotion } from '../mobile/motion';
     import { installModalA11y } from '../modals/modal-a11y';
     import { createSheetDragController } from '../modals/sheet-gesture';
@@ -16,6 +18,7 @@
     // it sits in. On a phone it becomes a bottom sheet instead, which is the
     // same surface the row actions and the drive switcher already use.
     const asSheet = isMobilePlatform();
+    const displayLocale = $derived(asSheet ? 'en' : $locale);
 
     interface Props {
         onFiles: () => void;
@@ -138,6 +141,7 @@
     id="upload-btn"
     class="primary-btn upload-btn"
     type="button"
+    lang={displayLocale}
     aria-haspopup={asSheet ? 'dialog' : 'menu'}
     aria-expanded={open ? 'true' : 'false'}
     aria-controls="upload-menu"
@@ -159,7 +163,7 @@
     {:else}
         <PlusIcon class="btn-icon" size={16} strokeWidth={2} aria-hidden="true" />
     {/if}
-    New
+    {workspaceText('newItem', displayLocale)}
 </button>
 <div
     bind:this={overlayEl}
@@ -178,6 +182,7 @@
         class="upload-menu"
         class:is-sheet={asSheet}
         role={asSheet ? 'dialog' : 'menu'}
+        lang={displayLocale}
         aria-modal={asSheet ? 'true' : undefined}
         aria-label={asSheet ? 'Upload options' : undefined}
         tabindex="-1"
@@ -203,12 +208,12 @@
     {/if}
     <button bind:this={filesEl} id="upload-menu-files" class="upload-menu-item" type="button" role={asSheet ? undefined : 'menuitem'} onclick={() => activate(onFiles)}>
         <FileUpIcon size={18} strokeWidth={1.8} aria-hidden="true" />
-        {onNewFolder ? 'Upload files' : 'Files'}
+        {workspaceText(onNewFolder ? 'uploadFiles' : 'files', displayLocale)}
     </button>
     {#if onFolder}
         <button bind:this={folderEl} id="upload-menu-folder" class="upload-menu-item" type="button" role={asSheet ? undefined : 'menuitem'} onclick={chooseFolder}>
             <FolderUpIcon size={18} strokeWidth={1.8} aria-hidden="true" />
-            {onNewFolder ? 'Upload folder' : 'Folder'}
+            {onNewFolder ? workspaceText('uploadFolder', displayLocale) : 'Folder'}
         </button>
     {/if}
     {#if onNewFolder}
@@ -217,7 +222,7 @@
         <div class="upload-menu-sep" role="separator"></div>
         <button bind:this={newFolderEl} id="upload-menu-new-folder" class="upload-menu-item" type="button" role={asSheet ? undefined : 'menuitem'} onclick={chooseNewFolder}>
             <FolderPlusIcon size={18} strokeWidth={1.8} aria-hidden="true" />
-            New folder
+            {workspaceText('newFolder', displayLocale)}
         </button>
     {/if}
     <!-- No Cancel row. The sheet already has four ways out that cost less than

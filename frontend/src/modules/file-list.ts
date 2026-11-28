@@ -5,7 +5,7 @@ import { splitNameAndExt, formatDate, formatBytes, isApplePlatform } from '../ut
 import { isOffline } from './connectivity';
 import { humanizeBackendError } from './errors';
 import { tick } from 'svelte';
-import { get } from 'svelte/store';
+import { get, readonly, writable } from 'svelte/store';
 import { breadcrumbPath } from '../ui/chrome/breadcrumb-store';
 import type { ContextMenuDetail } from '../ui/menus/context-menu-store';
 import { clearSelection, deselectRow, extendSelectionToIndex, handleRowSelection, isRowSelected, trashSelectedItems, reconcileSelection, selectAllRows, selectRow, getRowKey } from './selection';
@@ -32,7 +32,7 @@ import { canOpenFileViewer, isImageFile, isVideoFile } from './media-types';
 import { openImagePreview } from './image-preview';
 import { appActions, type RefreshFilesOptions } from './app-actions';
 import { getInteractiveFileListRows, showFileListRows, showFileListState, updateFileListRows, type InteractiveFileListRow } from '../ui/file-list/file-list-store';
-import type { FileListStateAction } from '../ui/file-list/types';
+import type { FileListStateAction, FileListText } from '../ui/file-list/types';
 import { fileListRowForElement } from '../ui/file-list/row-lookup';
 import { activeFileRowKey, setActiveFileRowKey } from '../ui/file-list/row-state-store';
 import { pageJumpIndex, typeAheadIndex } from '../ui/file-list/keyboard';
@@ -190,8 +190,8 @@ type FileStateKind = "loading" | "empty" | "error";
 export function renderFileState(
     list: HTMLElement,
     kind: FileStateKind,
-    title: string,
-    body = "",
+    title: FileListText,
+    body: FileListText = "",
     ...actions: FileListStateAction[]
 ) {
     list.removeAttribute('aria-rowcount');
@@ -314,6 +314,8 @@ export function buildFolderRow(folder: FolderRowInput, parentId: string, overrid
     const name = String(folder.name || overrides.name || 'Folder');
     const folderSize = overrides.size ?? 0;
     const folderModified = overrides.modifiedTime ?? 0;
+    const dateLabel = folderModified > 0 ? formatDate(folderModified) : '';
+    const sizeLabel = folderSize > 0 ? formatBytes(folderSize) : '';
     return {
         kind: 'folder',
         key: overrides.key || `folder:${id}`,
@@ -322,15 +324,19 @@ export function buildFolderRow(folder: FolderRowInput, parentId: string, overrid
         name,
         channelId: Number(overrides.channelId ?? state.activeChannel?.id ?? 0),
         parentId: String(overrides.parentId ?? folder.parentId ?? parentId ?? ''),
-        metaLabel: overrides.metaLabel ?? '',
-        sizeLabel: overrides.sizeLabel ?? '…',
+        metaLabel: overrides.metaLabel ?? dateLabel,
+        // The default placeholder is for callers that have no size lookup.
+        // A completed lookup with zero bytes leaves the cell empty.
+        sizeLabel: overrides.sizeLabel ?? (overrides.size === undefined ? '…' : sizeLabel),
+        ...(overrides.metaLabel === undefined && folderModified > 0 ? { localizeDate: true } : {}),
+        ...(overrides.sizeLabel === undefined && folderSize > 0 ? { localizeSize: true } : {}),
         size: folderSize,
         modifiedTime: folderModified,
         ariaLabel: overrides.ariaLabel ?? rowAnnouncement(
             'Folder',
             name,
-            folderSize > 0 ? formatBytes(folderSize) : '',
-            folderModified > 0 ? formatDate(folderModified) : '',
+            sizeLabel,
+            dateLabel,
         ),
         timeLabel: overrides.timeLabel,
         actionsInline: overrides.actionsInline,
@@ -368,6 +374,8 @@ export function buildFileRow(file: FileRowInput, parentId: string, overrides: Pa
         size,
         metaLabel,
         sizeLabel,
+        ...(overrides.metaLabel === undefined ? { localizeDate: true } : {}),
+        ...(overrides.sizeLabel === undefined ? { localizeSize: true } : {}),
         ariaLabel: overrides.ariaLabel ?? rowAnnouncement(
             'File',
             name,
@@ -655,22 +663,25 @@ function isCurrentFileRequest(request: FileRefreshRequest): boolean {
 
 // The drive the footer's number belongs to. Folder changes keep showing it
 // while the refresh runs; only a drive change blanks it.
-let storageDriveId: number | null = null;
+let storageDriveKey = '';
+const currentStorageUsageBytes = writable<number | null>(null);
+export const storageUsageBytes = readonly(currentStorageUsageBytes);
 
-function refreshStorageUsage(request: FileRefreshRequest, storageUsed: HTMLElement | null): void {
-    if (!storageUsed) return;
-    if (storageDriveId !== request.view.channelId) {
-        storageDriveId = request.view.channelId;
-        storageUsed.textContent = '—';
+function refreshStorageUsage(request: FileRefreshRequest): void {
+    if (isMobilePlatform()) return;
+    const driveKey = `${state.myUserID}:${request.view.channelId}`;
+    if (storageDriveKey !== driveKey) {
+        storageDriveKey = driveKey;
+        currentStorageUsageBytes.set(null);
     }
     void getStorageUsed()
         .then((bytes) => {
             if (!isCurrentFileRequest(request)) return;
             const value = Number(bytes);
-            storageUsed.textContent = Number.isFinite(value) && value >= 0 ? formatBytes(value) : '—';
+            currentStorageUsageBytes.set(Number.isFinite(value) && value >= 0 ? value : null);
         })
         .catch(() => {
-            if (isCurrentFileRequest(request)) storageUsed.textContent = '—';
+            if (isCurrentFileRequest(request)) currentStorageUsageBytes.set(null);
         });
 }
 
@@ -715,10 +726,6 @@ function rowsForLoadedData(data: LoadedFileData, view: FileViewIdentity): FileLi
             return buildFolderRow(folder, view.folderId, {
                 size,
                 modifiedTime,
-                // A folder shows a size only once one is known. Zero reads as "no
-                // files", which is rarely true and never useful, so it stays blank.
-                sizeLabel: size > 0 ? formatBytes(size) : '',
-                metaLabel: modifiedTime > 0 ? formatDate(modifiedTime) : '',
             });
         });
 
@@ -857,10 +864,10 @@ function publishLoadedFileData(list: HTMLElement, request: FileRefreshRequest, d
             renderFileState(
                 list,
                 'empty',
-                'This folder is empty',
-                'Upload files or create a folder to start organizing this drive.',
-                { label: 'Upload files', onClick: () => chooseFilesForCurrentFolder() },
-                { label: 'New folder', onClick: openNewFolderModal },
+                { key: 'emptyFolder' },
+                { key: 'emptyFolderHelp' },
+                { label: { key: 'uploadFiles' }, onClick: () => chooseFilesForCurrentFolder() },
+                { label: { key: 'newFolder' }, onClick: openNewFolderModal },
             );
         }
         afterFileListPaint(list, afterPublish);
@@ -882,9 +889,9 @@ function publishRefreshError(list: HTMLElement, request: FileRefreshRequest, err
     renderFileState(
         list,
         'error',
-        offline ? "You're offline" : 'Could not load this folder',
-        offline ? 'Reconnect to load this folder from Telegram.' : humanizeBackendError(error),
-        { label: 'Retry', onClick: () => appActions().refreshFiles() },
+        { key: offline ? 'offline' : 'folderLoadError' },
+        offline ? { key: 'offlineFolderHelp' } : humanizeBackendError(error),
+        { label: { key: 'retry' }, onClick: () => appActions().refreshFiles() },
     );
 }
 
@@ -946,9 +953,9 @@ export function refreshFiles({ background = false }: RefreshFilesOptions = {}): 
 
     if (presentation === 'foreground-navigation') {
         clearSelection();
-        renderFileState(list, 'loading', 'Loading files');
+        renderFileState(list, 'loading', { key: 'loadingFiles' });
     }
-    refreshStorageUsage(request, document.getElementById('storage-used'));
+    refreshStorageUsage(request);
 
     void loadFileData(view)
         .then((data) => publishLoadedFileData(list, request, data))

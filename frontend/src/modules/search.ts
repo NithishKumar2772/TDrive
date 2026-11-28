@@ -1,5 +1,4 @@
 import { state } from '../state';
-import { formatBytes } from '../utils';
 import { clearSelection, deselectRow, handleRowSelection, isRowSelected, selectRow } from './selection';
 import { renderBreadcrumb } from './navigation';
 import {
@@ -95,7 +94,7 @@ function renderSearchResults(results: SearchHit[], query: string) {
 
     const resultRows = results;
     if (!resultRows.length) {
-        renderFileState(list, "empty", `No results for "${String(query || "")}"`);
+        renderFileState(list, "empty", { key: 'noSearchResults', values: { query } });
         return;
     }
 
@@ -204,7 +203,6 @@ function renderSearchResults(results: SearchHit[], query: string) {
                 key: `search:file:${String(result.source || "fs")}:${id}`,
                 channelId: sourceChannelId,
                 metaLabel: String(result.path || driveRootLabel()),
-                sizeLabel: formatBytes(size),
                 actions,
                 onDoubleClick: open,
                 onClick: (event) => {
@@ -332,7 +330,7 @@ export async function runGlobalSearch() {
     const driveKey = getFolderIndexDriveKey() ?? 'none';
     setHeaderMode(true);
     clearSelection();
-    renderFileState(list, 'loading', 'Searching files');
+    renderFileState(list, 'loading', { key: 'searchingFiles' });
 
     try {
         // GetFileList already returns only raw openable Telegram attachments.
@@ -374,8 +372,8 @@ export async function runGlobalSearch() {
         renderSearchResults([...fs, ...tgMatches], query);
     } catch (err) {
         if (token !== activeToken || (getFolderIndexDriveKey() ?? 'none') !== driveKey) return;
-        renderFileState(list, 'error', 'Search failed', 'Check your connection, then try again.',
-            { label: 'Try again', onClick: () => { void runGlobalSearch(); } });
+        renderFileState(list, 'error', { key: 'searchFailed' }, { key: 'searchFailedHelp' },
+            { label: { key: 'tryAgain' }, onClick: () => { void runGlobalSearch(); } });
         console.error('Search failed:', err);
     }
 }

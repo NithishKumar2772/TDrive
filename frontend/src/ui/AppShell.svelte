@@ -9,6 +9,8 @@
     import Trash2Icon from '@lucide/svelte/icons/trash-2';
     import { isMobilePlatform, listChannelSourceTopics, listChannelMedia, listMountableDrives } from '../api';
     import tdriveLogo from '../assets/images/tdrive-logo.png';
+    import { formatBytes } from '../utils';
+    import { storageUsageBytes } from '../modules/file-list';
     import { openEncryptionSettingsModal } from '../modules/modals/encryption-settings';
     import { openLogoutModal } from '../modules/modals/logout';
     import { breadcrumbDrag, navigateBack, navigateHistory, navigateToIndex } from '../modules/navigation';
@@ -39,8 +41,10 @@
         showSharedActionsMenu,
     } from '../modules/sidebar';
     import { setFileSortKey, fileSortState } from './file-list/file-sort-store';
-    import { FILE_LIST_COLUMN_LABEL, fileListColumnMode } from './file-list/column-mode-store';
+    import { fileListColumnMode, type FileListColumnMode } from './file-list/column-mode-store';
     import type { FileSortKey } from './file-list/file-sort';
+    import { locale } from './i18n/locale-store';
+    import { workspaceText, type WorkspaceKey } from './i18n/workspace-messages';
     import Breadcrumb from './chrome/Breadcrumb.svelte';
     import ProfileMenu from './chrome/ProfileMenu.svelte';
     import SettingsWindow from './settings/SettingsWindow.svelte';
@@ -69,10 +73,14 @@
     // Desktop-only chrome: phones update through their app stores.
     const updaterAvailable = !isMobilePlatform();
 
-    function sortButtonLabel(key: FileSortKey): string {
-        const active = $fileSortState.key === key;
-        if (!active) return `Sort by ${key}`;
-        return `Sort by ${key} ${$fileSortState.direction === 'asc' ? 'descending' : 'ascending'}`;
+    const columnKeys: Record<FileListColumnMode, WorkspaceKey> = { date: 'date', location: 'location', purge: 'timeLeft' };
+    const secondColumnLabel = $derived(workspaceText(columnKeys[$fileListColumnMode], $locale));
+
+    function sortButtonLabel(key: Exclude<FileSortKey, 'type'>): string {
+        const column = workspaceText(key === 'date' && $fileListColumnMode === 'purge' ? 'timeLeft' : key, $locale);
+        const label = $fileSortState.key !== key ? 'sortBy'
+            : $fileSortState.direction === 'asc' ? 'sortDescending' : 'sortAscending';
+        return workspaceText(label, $locale, { column: $locale === 'en' ? column.toLowerCase() : column });
     }
 
     function sortAriaValue(key: FileSortKey): 'ascending' | 'descending' | 'none' {
@@ -109,7 +117,7 @@
             <span>TDrive</span>
         </div>
 
-        <nav id="drives-nav" class="drives-nav" tabindex="-1" aria-label="Drives">
+        <nav id="drives-nav" class="drives-nav" tabindex="-1" lang={$locale} aria-label={workspaceText('drives', $locale)}>
             <div class="drives-scroll">
                 <!-- The drive's own places lead the sidebar without a heading:
                      the drive row already says "My Drive". -->
@@ -120,9 +128,9 @@
                         {/if}
                     </div>
                     <div class="drives-list">
-                        <button id="nav-photos" class="drive-item nav-photos-item" type="button" title="Media">
+                        <button id="nav-photos" class="drive-item nav-photos-item" type="button" title={workspaceText('media', $locale)}>
                             <ImagesIcon class="icon" size={18} strokeWidth={2} aria-hidden="true" />
-                            <span class="drive-item-title">Media</span>
+                            <span class="drive-item-title" dir="auto">{workspaceText('media', $locale)}</span>
                         </button>
                         <!-- Trash sits with the drive's other destinations,
                              where a user who just lost a file looks for it,
@@ -131,17 +139,17 @@
                             id="nav-trash"
                             class="drive-item"
                             type="button"
-                            title="Trash"
+                            title={workspaceText('trash', $locale)}
                             onclick={openTrash}
                         >
                             <Trash2Icon class="icon" size={18} strokeWidth={2} aria-hidden="true" />
-                            <span class="drive-item-title">Trash</span>
+                            <span class="drive-item-title" dir="auto">{workspaceText('trash', $locale)}</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="drives-section">
-                    <div class="drives-section-title">Shared with me</div>
+                    <div class="drives-section-title">{workspaceText('sharedWithMe', $locale)}</div>
                     <div class="drives-list">
                         {#if dashboardVisible}
                             <DriveList
@@ -173,13 +181,13 @@
             </div>
 
             <div class="drives-actions">
-                <button id="open-new-drive" class="drive-action-btn" type="button" title="Create a new shared drive">
+                <button id="open-new-drive" class="drive-action-btn" type="button" title={workspaceText('newSharedDrive', $locale)}>
                     <FolderPlusIcon class="icon" size={16} strokeWidth={2} aria-hidden="true" />
-                    New shared drive
+                    <span dir="auto">{workspaceText('newSharedDrive', $locale)}</span>
                 </button>
-                <button id="open-join-drive" class="drive-action-btn" type="button" title="Join a shared drive via invite link">
+                <button id="open-join-drive" class="drive-action-btn" type="button" title={workspaceText('joinWithLink', $locale)}>
                     <Link2Icon class="icon" size={16} strokeWidth={2} aria-hidden="true" />
-                    Join with link
+                    <span dir="auto">{workspaceText('joinWithLink', $locale)}</span>
                 </button>
                 {#if dashboardVisible && mountAvailable}
                     <MountControl variant="sidebar" loadDrives={listMountableDrives} />
@@ -187,8 +195,8 @@
             </div>
         </nav>
 
-        <div class="storage-info">
-            <p>Storage<span id="storage-used">—</span></p>
+        <div class="storage-info" lang={$locale}>
+            <p><bdi>{workspaceText('storage', $locale)}</bdi><span id="storage-used">{$storageUsageBytes === null ? '—' : formatBytes($storageUsageBytes, $locale)}</span></p>
         </div>
     </aside>
 
@@ -212,9 +220,9 @@
                         onPathEditStart={forgetPendingFileFocus}
                     />
                 {/if}
-                <div id="gallery-title" class="gallery-title">Media</div>
+                <div id="gallery-title" class="gallery-title" lang={$locale}>{workspaceText('media', $locale)}</div>
                 <PhotosModeBar />
-                <div id="trash-title" class="trash-title">Trash</div>
+                <div id="trash-title" class="trash-title" lang={$locale}>{workspaceText('trash', $locale)}</div>
                 <!-- Destructive and irreversible, so it only ever opens the
                      confirmation. With nothing to empty it is absent rather than
                      disabled: a dead control invites a click that cannot do
@@ -224,11 +232,12 @@
                         id="trash-empty-btn"
                         class="trash-empty-btn"
                         type="button"
+                        lang={$locale}
                         disabled={$trashBusyKey !== ''}
                         onclick={askEmptyTrash}
                     >
                         <Trash2Icon size={15} strokeWidth={2} aria-hidden="true" />
-                        <span>Empty trash</span>
+                        <span>{workspaceText('emptyTrash', $locale)}</span>
                     </button>
                 {/if}
             </div>
@@ -239,7 +248,9 @@
 
             <div class="search-bar">
                 <SearchIcon class="search-icon" size={16} strokeWidth={2} aria-hidden="true" />
-                <input id="search-input" type="text" placeholder="Search files..." autocomplete="off" spellcheck="false" aria-label="Search files">
+                <input id="search-input" type="text" lang={$locale} dir="auto"
+                    placeholder={workspaceText('searchFiles', $locale) + '...'}
+                    autocomplete="off" spellcheck="false" aria-label={workspaceText('searchFiles', $locale)}>
             </div>
 
             <div class="header-actions">
@@ -275,7 +286,7 @@
             </div>
         </header>
 
-        <div class="file-table-header" role="row" aria-rowindex="1">
+        <div class="file-table-header" role="row" aria-rowindex="1" lang={$locale}>
             <div class="col-name" role="columnheader" aria-colindex="1" aria-sort={sortAriaValue('name')}>
                 <button
                     class:active={$fileSortState.key === 'name'}
@@ -284,7 +295,7 @@
                     aria-label={sortButtonLabel('name')}
                     onclick={() => setFileSortKey('name')}
                 >
-                    <span>Name</span>
+                    <span>{workspaceText('name', $locale)}</span>
                     <span class="file-sort-indicator" aria-hidden="true">{@render sortIndicator('name')}</span>
                 </button>
             </div>
@@ -296,7 +307,7 @@
                     aria-label={sortButtonLabel('date')}
                     onclick={() => setFileSortKey('date')}
                 >
-                    <span>{FILE_LIST_COLUMN_LABEL[$fileListColumnMode]}</span>
+                    <span>{secondColumnLabel}</span>
                     <span class="file-sort-indicator" aria-hidden="true">{@render sortIndicator('date')}</span>
                 </button>
             </div>
@@ -308,20 +319,20 @@
                     aria-label={sortButtonLabel('size')}
                     onclick={() => setFileSortKey('size')}
                 >
-                    <span>Size</span>
+                    <span>{workspaceText('size', $locale)}</span>
                     <span class="file-sort-indicator" aria-hidden="true">{@render sortIndicator('size')}</span>
                 </button>
             </div>
             <div class="col-actions" role="columnheader" aria-colindex="4">
-                <span class="sr-only">Actions</span>
+                <span class="sr-only">{workspaceText('actions', $locale)}</span>
             </div>
         </div>
 
-        <div id="file-list" class="file-list-box" data-file-drop-target data-nav={$folderMove ?? undefined} role="grid" aria-label="Files" aria-multiselectable="true" aria-colcount="4" tabindex="-1"></div>
+        <div id="file-list" class="file-list-box" data-file-drop-target data-nav={$folderMove ?? undefined} role="grid" lang={$locale} aria-label={workspaceText('files', $locale)} aria-multiselectable="true" aria-colcount="4" tabindex="-1"></div>
 
         <!-- Floats over the list while rows are selected; the selection
              controller reveals it. -->
-        <div id="selection-bar" class="selection-bar" style="display: none;" role="toolbar" aria-label="Selection">
+        <div id="selection-bar" class="selection-bar" style="display: none;" role="toolbar" aria-label={workspaceText('selection', $locale)}>
             {#if dashboardVisible}
                 <SelectionBar
                     onDownload={openSelectedItemsDownload}
@@ -334,7 +345,7 @@
 
         <!-- The gallery's scroll container: the thumbnail observer, click
              delegation and the viewer's return-to-grid find it by this id. -->
-        <div id="gallery-view" class="gallery-view" tabindex="-1" aria-label="Media">
+        <div id="gallery-view" class="gallery-view" tabindex="-1" aria-label={workspaceText('media', $locale)}>
             {#if dashboardVisible}
                 <PhotosSurface />
             {/if}

@@ -8,7 +8,7 @@ export const englishMessages = {
     updates: 'Updates',
     updateReady: 'Update ready',
     language: 'Language',
-    languageDescription: 'Choose the language for translated sections of Settings.',
+    languageDescription: 'Choose the language for translated parts of TDrive.',
     systemDefault: 'System default',
     closeSettings: 'Close settings',
     loadingAccount: 'Loading account…',

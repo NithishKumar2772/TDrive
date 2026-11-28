@@ -1,3 +1,5 @@
+import type { WorkspaceKey, WorkspaceValues } from '../i18n/workspace-messages';
+
 export type FileListActionKind = 'open' | 'play' | 'download' | 'restore' | 'purge';
 
 export type FileListAction = {
@@ -34,6 +36,10 @@ type BaseInteractiveRow = {
     channelId?: number;
     metaLabel: string;
     sizeLabel: string;
+    // The list formats these cells from the row's raw stats on desktop.
+    // Rows that supply a display label, such as a search path, keep that text.
+    localizeDate?: true;
+    localizeSize?: true;
     ariaLabel: string;
     /**
      * What to say in place of the row's age on the phone's meta line, where
@@ -97,16 +103,21 @@ export type PendingFolderListRow = {
 
 export type FileListRow = FolderListRow | FileListFileRow | PendingFolderListRow;
 
+export type FileListText = string | Readonly<{
+    key: WorkspaceKey;
+    values?: WorkspaceValues;
+}>;
+
 export type FileListStateAction = Readonly<{
-    label: string;
+    label: FileListText;
     onClick: () => void;
 }>;
 
 export type FileListStateView = {
     kind: 'state';
     stateKind: 'loading' | 'empty' | 'error';
-    title: string;
-    body?: string;
+    title: FileListText;
+    body?: FileListText;
     actions?: readonly FileListStateAction[];
 };
 

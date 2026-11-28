@@ -6,6 +6,9 @@
     import { tick } from 'svelte';
     import { isApplePlatform } from '../../utils';
     import { eventOccurredWithin } from '../event-path';
+    import { locale } from '../i18n/locale-store';
+    import { translate } from '../i18n/messages';
+    import { workspaceText } from '../i18n/workspace-messages';
     import { openSettings } from '../settings/settings-store';
     import { recoverThemeTransitionClick } from '../theme/theme-interaction';
     import { updateBadge, updatesPanelRequest } from '../updates/update-store';
@@ -27,7 +30,7 @@
     let menuEl = $state<HTMLElement | null>(null);
 
     const displayName = $derived(
-        !$profileLoaded ? 'Loading account…' : $profileUser?.displayName || 'Telegram account',
+        !$profileLoaded ? translate('loadingAccount', $locale) : $profileUser?.displayName || translate('telegramAccount', $locale),
     );
     const handle = $derived(($profileUser?.username || '').trim());
     const settingsShortcut = isApplePlatform() ? '⌘,' : 'Ctrl+,';
@@ -133,7 +136,8 @@
     aria-haspopup="menu"
     aria-expanded={open ? 'true' : 'false'}
     aria-controls="profile-menu"
-    title="Account"
+    title={translate('account', $locale)}
+    lang={$locale}
     onclick={(event) => {
         event.stopPropagation();
         toggleMenu();
@@ -152,6 +156,7 @@
     class="profile-menu"
     role="menu"
     aria-labelledby="profile-trigger"
+    lang={$locale}
     tabindex="-1"
     hidden={!open}
     onkeydown={onMenuKeydown}
@@ -175,7 +180,7 @@
         onclick={() => activate(() => openSettings())}
     >
         <SettingsIcon size={16} strokeWidth={2} aria-hidden="true" />
-        <span>Settings…</span>
+        <span>{translate('settings', $locale)}…</span>
         <span class="profile-menu-value" aria-hidden="true">{settingsShortcut}</span>
     </button>
     {#if updaterAvailable}
@@ -187,9 +192,9 @@
             onclick={() => activate(() => openSettings('updates'))}
         >
             <DownloadIcon size={16} strokeWidth={2} aria-hidden="true" />
-            <span>Check for updates</span>
+            <span>{workspaceText('checkForUpdates', $locale)}</span>
             {#if $updateBadge === 'ready'}
-                <span class="profile-menu-tag" aria-label="Update ready">Ready</span>
+                <span class="profile-menu-tag" aria-label={translate('updateReady', $locale)}>{workspaceText('ready', $locale)}</span>
             {/if}
         </button>
     {/if}
@@ -202,6 +207,6 @@
         onclick={() => activate(onLogout)}
     >
         <LogOutIcon size={16} strokeWidth={2} aria-hidden="true" />
-        <span>Log out</span>
+        <span>{translate('logOut', $locale)}</span>
     </button>
 </div>

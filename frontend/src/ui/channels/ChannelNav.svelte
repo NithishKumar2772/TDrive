@@ -4,8 +4,11 @@
     import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
     import FoldersIcon from '@lucide/svelte/icons/folders';
     import PlusIcon from '@lucide/svelte/icons/plus';
+    import { isMobilePlatform } from '../../api';
     import { state as appState } from '../../state';
     import { profileUser } from '../chrome/profile-store';
+    import { locale } from '../i18n/locale-store';
+    import { workspaceText } from '../i18n/workspace-messages';
     import ChannelAvatar from './ChannelAvatar.svelte';
     import { sourceKey, sourcePeerLabel, type ChannelSource } from './channel-model';
     import type { ChannelSourcesState } from './channel-store';
@@ -28,6 +31,11 @@
     }
 
     let { sources, activeKey, loadPhoto, onSelect, onActions, onAdd, onRetry }: Props = $props();
+
+    const mobile = isMobilePlatform();
+    const displayLocale = $derived(mobile ? 'en' : $locale);
+    const addSourceLabel = $derived(workspaceText('addSource', displayLocale));
+    const manageGroupsLabel = $derived(workspaceText('manageSourceGroups', displayLocale));
 
     const accountId = $derived(sources.sources[0]?.accountId
         ?? (sources.status === 'ready' ? String(appState.myUserID || $profileUser?.userId || '') : ''));
@@ -101,6 +109,7 @@
             class="channel-nav-actions"
             type="button"
             aria-haspopup="menu"
+            lang="en"
             aria-label={`Actions for ${source.title}`}
             onclick={(event) => openActions(event, source)}
         >
@@ -109,15 +118,15 @@
     </div>
 {/snippet}
 
-<div class="channel-nav-title">
-    <span>Sources</span>
+<div class="channel-nav-title" lang={displayLocale}>
+    <span>{workspaceText('sources', displayLocale)}</span>
     <div class="channel-nav-tools">
         {#if accountId}
-            <button class="channel-nav-add" type="button" title="Manage source groups" aria-label="Manage source groups" onclick={() => openSourceOrganizationManager(accountId)}>
+            <button class="channel-nav-add" type="button" title={manageGroupsLabel} aria-label={manageGroupsLabel} onclick={() => openSourceOrganizationManager(accountId)}>
                 <FoldersIcon size={14} strokeWidth={2} aria-hidden="true" />
             </button>
         {/if}
-        <button class="channel-nav-add" type="button" title="Add a source" aria-label="Add a source" onclick={onAdd}>
+        <button class="channel-nav-add" type="button" title={addSourceLabel} aria-label={addSourceLabel} onclick={onAdd}>
             <PlusIcon size={14} strokeWidth={2.25} aria-hidden="true" />
         </button>
     </div>
@@ -140,28 +149,28 @@
                     {#each group.sources as source (sourceKey(source))}
                         {@render sourceRow(source)}
                     {:else}
-                        <p class="channel-nav-group-empty">No sources</p>
+                        <p class="channel-nav-group-empty" lang={displayLocale}>{workspaceText('noSources', displayLocale)}</p>
                     {/each}
                 </div>
             {/if}
         </section>
     {/each}
     {#if sourceGroups.groups.length > 0 && sourceGroups.ungrouped.length > 0}
-        <div class="channel-nav-ungrouped">Ungrouped</div>
+        <div class="channel-nav-ungrouped" lang={displayLocale}>{workspaceText('ungrouped', displayLocale)}</div>
     {/if}
     {#each sourceGroups.ungrouped as source (sourceKey(source))}
         {@render sourceRow(source)}
     {/each}
     {#if sources.sources.length === 0}
         {#if sources.status === 'error'}
-            <div class="drive-empty channel-nav-error">
-                Sources did not load.
-                <button class="link-button" type="button" onclick={onRetry}>Retry</button>
+            <div class="drive-empty channel-nav-error" lang={displayLocale}>
+                {workspaceText('sourcesLoadError', displayLocale)}
+                <button class="link-button" type="button" onclick={onRetry}>{workspaceText('retry', displayLocale)}</button>
             </div>
         {:else if sources.status === 'ready'}
-            <button class="drive-item channel-nav-item" type="button" onclick={onAdd}>
+            <button class="drive-item channel-nav-item" type="button" lang={displayLocale} onclick={onAdd}>
                 <span class="channel-nav-add-icon" aria-hidden="true"><PlusIcon size={12} strokeWidth={2.5} /></span>
-                <span class="drive-item-title">Add a source</span>
+                <span class="drive-item-title">{addSourceLabel}</span>
             </button>
         {/if}
     {/if}

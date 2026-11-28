@@ -34,12 +34,12 @@ vi.mock('./context-menu', () => ({ showRowContextMenu: vi.fn() }));
 
 import FileList from '../ui/file-list/FileList.svelte';
 import { fileListView } from '../ui/file-list/file-list-store';
+import { setLocalePreference } from '../ui/i18n/locale-store';
 import { state } from '../state';
 import { openNewFolderModal } from './modals/folder';
-import { canOwnerActOnFile, buildFileRow, refreshFiles, resetFileListScrollRestore } from './file-list';
+import { canOwnerActOnFile, buildFileRow, refreshFiles, renderFileListRows, resetFileListScrollRestore, storageUsageBytes } from './file-list';
 
 let list: HTMLDivElement;
-let storage: HTMLDivElement;
 let app: ReturnType<typeof mount>;
 const file = (name = 'report.txt', msgId = 41): FileItem => ({
     msgId, name, size: 1000, parentId: '', uploadTime: 100, uploaderId: 7,
@@ -56,6 +56,7 @@ async function expectText(text: string) {
 }
 
 beforeEach(() => {
+    setLocalePreference('en');
     vi.resetAllMocks();
     api.getFolderContents.mockResolvedValue({ folders: [], files: [file()] });
     api.getFileList.mockResolvedValue([]);
@@ -72,17 +73,69 @@ beforeEach(() => {
     state.pendingFolderOps.clear();
     state.selectedItems.clear();
     list = document.createElement('div'); list.id = 'file-list'; list.tabIndex = 0;
-    storage = document.createElement('div'); storage.id = 'storage-used';
-    document.body.append(list, storage);
+    document.body.append(list);
     app = mount(FileList, { target: list });
     flushSync();
 });
 afterEach(async () => {
     await unmount(app);
-    list.remove(); storage.remove();
+    setLocalePreference('system');
+    list.remove();
     state.pendingFolderOps.clear(); state.pendingFocus = null;
     state.selectedItems.clear(); state.userNames.clear();
     vi.restoreAllMocks();
+});
+
+it('formats existing desktop rows in the chosen language without refreshing the folder', async () => {
+    const uploadTime = new Date(2026, 10, 14, 12).getTime() / 1000;
+    api.getFolderContents.mockResolvedValue({ folders: [], files: [{ ...file(), size: 1536, uploadTime }] });
+    refreshFiles();
+    await expectText('report.txt');
+    const row = list.querySelector('[data-name="report.txt"]');
+    const date = row?.querySelector('[aria-colindex="2"]');
+    const size = row?.querySelector('[aria-colindex="3"]');
+    expect(date?.textContent).toBe('Nov 14, 2026');
+    expect(size?.textContent).toBe('1.5 KB');
+
+    setLocalePreference('de');
+    flushSync();
+
+    expect(list.querySelector('[data-name="report.txt"]')).toBe(row);
+    expect(date?.textContent).toMatch(/^14\. Nov\.? 2026$/);
+    expect(size?.textContent).toBe('1,5 KB');
+    expect(api.getFolderContents).toHaveBeenCalledTimes(1);
+    expect(api.getStorageUsed).toHaveBeenCalledTimes(1);
+});
+
+it('keeps preformatted path and size labels when changing language', () => {
+    const result = buildFileRow({ msgId: 41, name: 'report.txt', size: 1536, date: 100 }, '', {
+        metaLabel: 'Work / Q4',
+        sizeLabel: '—',
+    });
+    renderFileListRows(list, [result]);
+
+    setLocalePreference('de');
+    flushSync();
+
+    const row = list.querySelector('[data-name="report.txt"]');
+    expect(row?.querySelector('[aria-colindex="2"]')?.textContent).toBe('Work / Q4');
+    expect(row?.querySelector('[aria-colindex="3"]')?.textContent).toBe('—');
+});
+
+it('updates an empty folder and its upload action without reopening the folder', async () => {
+    api.getFolderContents.mockResolvedValue({ folders: [], files: [] });
+    refreshFiles();
+    await expectText('This folder is empty');
+
+    setLocalePreference('hi');
+    flushSync();
+
+    expect(list.querySelector('.file-state-title')?.textContent).toBe('यह फ़ोल्डर खाली है');
+    const upload = list.querySelector<HTMLButtonElement>('.file-state-actions button');
+    expect(upload?.textContent).toBe('फ़ाइलें अपलोड करें');
+    upload?.click();
+    expect(deps.upload).toHaveBeenCalledTimes(1);
+    expect(api.getFolderContents).toHaveBeenCalledTimes(1);
 });
 
 it('merges root files without duplicating projected messages and shows plaintext sizes', async () => {
@@ -145,7 +198,7 @@ it('rejects old drive results and old storage totals after navigation', async ()
     flushSync();
     expect(list.textContent).toContain('current.txt');
     expect(list.textContent).not.toContain('stale.txt');
-    expect(storage.textContent).toBe('1 KB');
+    expect(get(storageUsageBytes)).toBe(1024);
     expect(state.telegramRootCacheDriveKey).toBe('2');
 });
 
@@ -221,7 +274,7 @@ it('refreshes uploader labels only while the shared-drive request is current', a
 it.each([NaN, -1])('does not display invalid storage usage %s', async (size) => {
     api.getStorageUsed.mockResolvedValue(size);
     refreshFiles(); await expectText('report.txt');
-    expect(storage.textContent).toBe('—');
+    expect(get(storageUsageBytes)).toBeNull();
 });
 
 
@@ -288,5 +341,5 @@ it('does not apply late user names to a replacement personal-drive listing', asy
 it('shows unavailable storage when the usage query fails', async () => {
     api.getStorageUsed.mockRejectedValue(new Error('usage unavailable'));
     refreshFiles(); await expectText('report.txt');
-    expect(storage.textContent).toBe('—');
+    expect(get(storageUsageBytes)).toBeNull();
 });

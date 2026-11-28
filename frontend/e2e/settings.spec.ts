@@ -81,6 +81,57 @@ test('Mount saves the Windows drive letter for the next mount', async ({ page })
     await expect.poll(async () => (await mock.calls('SetMountDriveLetter')).map((call) => call.args)).toEqual([['Q:']]);
 });
 
+test('switching to Hindi updates the desktop workspace and preserves file names', async ({ page }) => {
+    await bootTDrive(page, {
+        GetFolderContents: resolves({
+            folders: [],
+            files: [{
+                name: 'Untouched filename.txt', size: 2_560, msg_id: 41, parent_id: '',
+                upload_time: 1_735_689_600, uploader_id: 7, encrypted: false, plaintext_size: 0,
+            }],
+        }),
+    });
+    await expect(page.locator('#nav-photos')).toHaveText('Media');
+    await expect(page.getByText('Untouched filename.txt', { exact: true })).toBeVisible();
+
+    const settings = await openSettingsSection(page, 'Language');
+    await settings.locator('#settings-language').selectOption('hi');
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#nav-photos')).toHaveText('मीडिया');
+    await expect(page.locator('#nav-trash')).toHaveText('कूड़ेदान');
+    await expect(page.locator('#drives-nav')).toContainText('मेरे साथ साझा किए गए');
+    await expect(page.locator('#drives-nav')).toContainText('स्रोत');
+    await expect(page.locator('#open-new-drive')).toHaveText('नई साझा ड्राइव');
+    await expect(page.locator('#open-join-drive')).toHaveText('लिंक से जुड़ें');
+    await expect(page.locator('#mount-drive-button')).toHaveText('ड्राइव माउंट');
+    await expect(page.locator('.storage-info')).toContainText('स्टोरेज');
+    await expect(page.locator('#search-input')).toHaveAttribute('placeholder', 'फ़ाइलें खोजें...');
+    await expect(page.locator('#upload-btn')).toHaveText('नया');
+    await expect(page.getByRole('columnheader', { name: /नाम/ })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: /तारीख/ })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: /आकार/ })).toBeVisible();
+    await expect(page.getByText('Untouched filename.txt', { exact: true })).toBeVisible();
+    const localizedDate = await page.evaluate(() => new Date(1_735_689_600_000).toLocaleDateString('hi', {
+        day: 'numeric', month: 'short', year: 'numeric',
+    }));
+    const row = page.locator('#file-list [data-name="Untouched filename.txt"]');
+    const dateCell = row.locator('[aria-colindex="2"]');
+    await expect(row).toHaveAttribute('lang', 'en');
+    await expect(dateCell).toHaveAttribute('lang', 'hi');
+    await expect(dateCell).toHaveText(localizedDate);
+
+    await page.reload();
+    await expect(page.locator('#nav-photos')).toHaveText('मीडिया');
+    await page.locator('#profile-trigger').click();
+    await page.locator('#profile-menu-settings').click();
+    await page.locator('#settings-nav-language').click();
+    await page.locator('#settings-language').selectOption('en');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#nav-photos')).toHaveText('Media');
+    await expect(page.locator('#search-input')).toHaveAttribute('placeholder', 'Search files...');
+});
+
 test('Arabic mirrors Settings and keeps the selected language after reload', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await bootTDrive(page);
@@ -121,7 +172,7 @@ test('Arabic mirrors Settings and keeps the selected language after reload', asy
 
     await page.reload();
     await page.locator('#profile-trigger').click();
-    await page.getByRole('menuitem', { name: 'Settings…' }).click();
+    await page.locator('#profile-menu-settings').click();
     await expect(dialog).toHaveAttribute('lang', 'ar');
     await nav.locator('#settings-nav-language').click();
     await expect(language).toHaveValue('ar');

@@ -23,15 +23,6 @@ import { writable } from 'svelte/store';
 
 export type FileListColumnMode = 'date' | 'location' | 'purge';
 
-/** What each mode calls the column. */
-export const FILE_LIST_COLUMN_LABEL: Record<FileListColumnMode, string> = {
-    date: 'Date',
-    location: 'Location',
-    // The trash reports how long each item has left, which is the fact it
-    // exists to tell you -- not the date it was added to the drive.
-    purge: 'Time left',
-};
-
 export const fileListColumnMode = writable<FileListColumnMode>('date');
 
 /** Leaving search or the trash returns the column to the drive's own ordering. */

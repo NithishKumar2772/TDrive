@@ -27,10 +27,10 @@ export function splitNameAndExt(filename: string): { base: string; ext: string }
     return { base, ext };
 }
 
-export function formatDate(unixTimestamp: number): string {
+export function formatDate(unixTimestamp: number, locale = 'en-US'): string {
     if (!unixTimestamp) return "-";
     const date = new Date(unixTimestamp * 1000);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 /** "4:05" or "1:02:09", the way a player's clock reads. */
@@ -46,10 +46,11 @@ export function formatDuration(value: number): string {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
+export function formatBytes(bytes: number, locale?: string): string {
+    if (bytes === 0) return `${locale ? bytes.toLocaleString(locale) : '0'} B`;
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    const magnitude = Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1));
+    return `${locale ? magnitude.toLocaleString(locale, { maximumFractionDigits: 1 }) : magnitude} ${sizes[i]}`;
 }

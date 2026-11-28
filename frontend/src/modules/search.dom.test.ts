@@ -165,8 +165,8 @@ describe('search scheduling', () => {
         await runGlobalSearch();
 
         expect(mocks.renderFileState).toHaveBeenLastCalledWith(
-            expect.anything(), 'error', 'Search failed', expect.any(String),
-            expect.objectContaining({ label: 'Try again' }),
+            expect.anything(), 'error', { key: 'searchFailed' }, { key: 'searchFailedHelp' },
+            expect.objectContaining({ label: { key: 'tryAgain' } }),
         );
     });
 

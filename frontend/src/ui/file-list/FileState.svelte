@@ -1,15 +1,18 @@
 <script lang="ts">
     import FolderIcon from '@lucide/svelte/icons/folder';
     import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-    import type { FileListStateAction } from './types';
+    import type { Locale } from '../i18n/messages';
+    import { workspaceText } from '../i18n/workspace-messages';
+    import type { FileListStateAction, FileListText } from './types';
 
     type FileStateKind = 'loading' | 'empty' | 'error';
 
     interface FileStateProps {
         kind: FileStateKind;
-        title: string;
-        body?: string;
+        title: FileListText;
+        body?: FileListText;
         actions?: readonly FileListStateAction[];
+        locale?: Locale;
     }
 
     let {
@@ -17,7 +20,12 @@
         title,
         body = '',
         actions = [],
+        locale = 'en',
     }: FileStateProps = $props();
+
+    function text(value: FileListText): string {
+        return typeof value === 'string' ? value : workspaceText(value.key, locale, value.values);
+    }
 </script>
 
 <div class={`file-state is-${kind}`} role={kind === 'error' ? 'alert' : 'status'} aria-busy={kind === 'loading' ? 'true' : 'false'}>
@@ -42,14 +50,14 @@
                 <TriangleAlertIcon size={24} strokeWidth={2} aria-hidden="true" />
             {/if} </div>
         {/if}
-    <div class:sr-only={kind === 'loading'} class="file-state-title">{title}</div>
+    <div class:sr-only={kind === 'loading'} class="file-state-title" lang={typeof title === 'string' ? 'en' : locale}>{text(title)}</div>
     {#if body}
-        <div class:sr-only={kind === 'loading'} class="file-state-body">{body}</div>
+        <div class:sr-only={kind === 'loading'} class="file-state-body" lang={typeof body === 'string' ? 'en' : locale}>{text(body)}</div>
     {/if}
     {#if actions.length > 0}
         <div class="file-state-actions">
             {#each actions as action (action.label)}
-                <button class="secondary-btn" type="button" onclick={action.onClick}>{action.label}</button>
+                <button class="secondary-btn" type="button" lang={typeof action.label === 'string' ? 'en' : locale} onclick={action.onClick}>{text(action.label)}</button>
             {/each}
         </div>
     {/if}

@@ -4,6 +4,9 @@
     import { onMount } from 'svelte';
     import { notify } from '../../modules/notifications';
     import type { MountableDrive } from '../../types';
+    import { locale } from '../i18n/locale-store';
+    import { translate } from '../i18n/messages';
+    import { workspaceText } from '../i18n/workspace-messages';
     import {
         createMountController,
         defaultMountApi,
@@ -30,21 +33,34 @@
         void controller.refresh();
     });
 
+    const mountAction = $derived(translate('mount', $locale));
+    const mountLabel = $derived(`${mountAction} ${$controller.label}`);
+    const ejectAction = $derived(workspaceText('ejectDrive', $locale));
     const ejectLabel = $derived.by(() => {
-        if ($controller.phase !== 'disconnecting') return 'Eject Tdrive';
+        if ($controller.phase !== 'disconnecting') return ejectAction;
         if ($controller.mode === 'read-write' && $controller.writeState === 'draining') {
-            if ($controller.activeWrites === 1) return 'Finishing 1 change...';
-            if ($controller.activeWrites > 1) return `Finishing ${$controller.activeWrites} changes...`;
-            return 'Finishing changes...';
+            const pending = $controller.activeWrites;
+            const finishing = workspaceText('finishingChanges', $locale);
+            if (pending <= 0) return finishing;
+            if ($locale === 'en') return `Finishing ${pending} ${pending === 1 ? 'change' : 'changes'}...`;
+            return `${finishing} (${pending.toLocaleString($locale)})`;
         }
-        return 'Ejecting Tdrive...';
+        return workspaceText('ejectingDrive', $locale);
     });
+    const mountStatus = $derived(
+        $loadingDrives
+            ? workspaceText('loadingDrives', $locale)
+            : $controller.phase === 'mounting'
+                ? workspaceText('mountingDrive', $locale, { name: $controller.label })
+                : mountAction,
+    );
 </script>
 
 <div
     class="mount-control"
     role="group"
-    aria-label={`${$controller.label} mount controls`}
+    aria-label={$locale === 'en' ? `${$controller.label} mount controls` : mountLabel}
+    lang={$locale}
     aria-live="polite"
 >
     {#if $controller.mounted}
@@ -55,7 +71,7 @@
             role={variant === 'menu' ? 'menuitem' : undefined}
             disabled={$controller.phase === 'disconnecting'}
             aria-busy={$controller.phase === 'disconnecting' ? 'true' : undefined}
-            aria-label="Eject Tdrive"
+            aria-label={ejectAction}
             onclick={() => {
                 onMenuAction();
                 void controller.disconnect();
@@ -75,14 +91,14 @@
             role={variant === 'menu' ? 'menuitem' : undefined}
             disabled={$loadingDrives || $controller.phase === 'mounting'}
             aria-busy={$loadingDrives || $controller.phase === 'mounting' ? 'true' : undefined}
-            aria-label={`Mount ${$controller.label}`}
+            aria-label={mountLabel}
             onclick={() => {
                 void controller.requestMount({ loadDrives, onAction: onMenuAction });
             }}
         >
             <HardDriveIcon class="mount-action-icon" size={16} strokeWidth={2} aria-hidden="true" />
             <span class="mount-menu-title">
-                {$loadingDrives ? 'Loading drives...' : $controller.phase === 'mounting' ? `Mounting ${$controller.label}...` : 'Mount'}
+                {mountStatus}
             </span>
             {#if $loadingDrives || $controller.phase === 'mounting'}
                 <span class="mount-menu-spinner" aria-hidden="true"></span>
@@ -91,7 +107,7 @@
     {/if}
 
     {#if $controller.phase === 'error'}
-        <span class="mount-announcement" role="alert">
+        <span class="mount-announcement" role="alert" lang="en">
             {$controller.error || 'The drive operation failed. Try again.'}
         </span>
     {/if}

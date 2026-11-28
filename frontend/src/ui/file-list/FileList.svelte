@@ -12,6 +12,8 @@
     import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
     import Trash2Icon from '@lucide/svelte/icons/trash-2';
     import { isMobilePlatform } from '../../api';
+    import { formatBytes, formatDate } from '../../utils';
+    import { locale } from '../i18n/locale-store';
     import FileState from './FileState.svelte';
     import FileThumbnail from './FileThumbnail.svelte';
     import FileWatchProgress from './FileWatchProgress.svelte';
@@ -332,6 +334,7 @@
         title={$fileListView.title}
         body={$fileListView.body ?? ''}
         actions={$fileListView.actions ?? []}
+        locale={mobile ? 'en' : $locale}
     />
 {:else if mobile}
     <div aria-hidden="true" style:height={`${rowWindow.before}px`}></div>
@@ -483,6 +486,7 @@
                 data-type="pending-folder"
                 data-temp-id={row.tempId}
                 role="row"
+                lang="en"
                 aria-rowindex={rowWindow.start + rowIndex + 2}
                 title="Creating..."
             >
@@ -506,6 +510,7 @@
                 data-row-key={row.selectionKey}
                 data-name={row.name}
                 role="row"
+                lang="en"
                 aria-rowindex={rowWindow.start + rowIndex + 2}
                 aria-selected={$selectedFileRowKeys.has(row.selectionKey) ? 'true' : 'false'}
                 aria-label={row.ariaLabel}
@@ -538,8 +543,12 @@
                         {/if}
                     {/if}
                 </div>
-                <div class="row-meta" role="gridcell" aria-colindex="2">{row.metaLabel}</div>
-                <div class={`row-meta ${row.kind === 'folder' ? 'folder-size' : ''}`} role="gridcell" aria-colindex="3">{row.sizeLabel}</div>
+                <div class="row-meta" role="gridcell" aria-colindex="2" lang={row.localizeDate ? $locale : undefined}>
+                    {row.localizeDate && $locale !== 'en' ? formatDate(row.kind === 'folder' ? row.modifiedTime : row.uploadTime, $locale) : row.metaLabel}
+                </div>
+                <div class={`row-meta ${row.kind === 'folder' ? 'folder-size' : ''}`} role="gridcell" aria-colindex="3" lang={row.localizeSize ? $locale : undefined}>
+                    {row.localizeSize && $locale !== 'en' ? formatBytes(row.size, $locale) : row.sizeLabel}
+                </div>
                 <div class={`row-actions${row.actionsInline ? ' is-inline' : ''}`} role="gridcell" aria-colindex="4">
                     {@render inlineActions(row, 16)}
                     {#if !row.actionsInline}
