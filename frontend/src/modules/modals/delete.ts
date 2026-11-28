@@ -17,6 +17,7 @@ import { humanizeBackendError } from '../errors';
 import { appActions } from '../app-actions';
 import { callWithPasswordRetry } from './encryption-password';
 import { markRowsBusy } from '../../ui/file-list/busy-rows';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import type {
     FileCommandItem,
     FileCommandTarget,
@@ -31,15 +32,15 @@ function failureBatchTitle(items: FileCommandItem[]): string {
     if (items.length === 1) return failureTitle(items[0]);
     const folders = items.filter(isFolder).length;
     const files = items.length - folders;
-    if (folders === 0) return `Could not delete ${files} files`;
-    if (files === 0) return `Could not delete ${folders} folders`;
-    return `Could not delete ${items.length} items`;
+    if (folders === 0) return desktopText('Could not delete {count} files', { count: files });
+    if (files === 0) return desktopText('Could not delete {count} folders', { count: folders });
+    return desktopText('Could not delete {count} items', { count: items.length });
 }
 
 function failureTitle(item: FileCommandItem): string {
     const name = item.name.trim();
-    if (!name) return item.type === 'folder' ? 'Could not delete folder' : 'Could not delete file';
-    return item.type === 'folder' ? `Could not delete folder "${name}"` : `Could not delete "${name}"`;
+    if (!name) return item.type === 'folder' ? desktopText('Could not delete folder') : desktopText('Could not delete file');
+    return item.type === 'folder' ? desktopText('Could not delete folder "{name}"', { name }) : desktopText('Could not delete "{name}"', { name });
 }
 
 function isFolder(item: FileCommandItem): item is FolderCommandItem {
@@ -75,14 +76,14 @@ export function moveToTrash(target: FileCommandTarget): Promise<void> {
         : [target.channelId ?? activeId];
     const channelId = channels[0] ?? activeId;
     if (channelId !== activeId || channels.some((id) => id !== channelId)) {
-        notify({ level: 'info', title: 'Switch back to that drive to delete this item' });
+        notify({ level: 'info', title: desktopText('Switch back to that drive to delete this item') });
         return Promise.resolve();
     }
     if (target.type !== 'bulk') return runMoveToTrash(target, channelId, 0);
 
     const allowed = target.items.filter((item) => item.canDelete !== false);
     if (allowed.length === 0) {
-        notify({ level: 'info', title: 'You can only delete items you uploaded' });
+        notify({ level: 'info', title: desktopText('You can only delete items you uploaded') });
         return Promise.resolve();
     }
     return runMoveToTrash({ ...target, items: allowed }, channelId, target.items.length - allowed.length);
@@ -96,7 +97,7 @@ export function moveToTrash(target: FileCommandTarget): Promise<void> {
  */
 async function undoDelete(objectIds: string[], channelId: number): Promise<void> {
     if (activeChannelId() !== channelId) {
-        notify({ level: 'info', title: 'Switch back to that drive to restore from the Trash' });
+        notify({ level: 'info', title: desktopText('Switch back to that drive to restore from the Trash') });
         return;
     }
     let restored = 0;
@@ -120,10 +121,10 @@ async function undoDelete(objectIds: string[], channelId: number): Promise<void>
         if (activeChannelId() === channelId) appActions().refreshFiles();
     }
     if (switchedDrive) {
-        notify({ level: 'info', title: 'Switch back to that drive to restore from the Trash' });
+        notify({ level: 'info', title: desktopText('Switch back to that drive to restore from the Trash') });
     }
     if (reasons.length > 0) {
-        notify({ level: 'error', title: 'Could not restore from the Trash', body: reasons[0] });
+        notify({ level: 'error', title: desktopText('Could not restore from the Trash'), body: reasons[0] });
     }
 }
 
@@ -131,13 +132,13 @@ async function undoDelete(objectIds: string[], channelId: number): Promise<void>
 function notifyMovedToTrash(items: FileCommandItem[], channelId: number, skipped = 0): void {
     if (items.length === 0) return;
     const objectIds = items.map(trashObjectId);
-    const title = items.length === 1 ? 'Moved to Trash' : `Moved ${items.length} items to Trash`;
+    const title = items.length === 1 ? desktopText('Moved to Trash') : desktopText('Moved {count} items to Trash', { count: items.length });
     const toastId = notify({
         level: 'success',
         title,
-        body: skipped > 0 ? `Skipped ${skipped} you didn't upload.` : '',
+        body: skipped > 0 ? desktopText("Skipped {count} you didn't upload.", { count: skipped }) : '',
         action: {
-            label: 'Undo',
+            label: desktopText('Undo'),
             run: () => {
                 dismissNotification(toastId);
                 void undoDelete(objectIds, channelId);
@@ -197,7 +198,7 @@ async function runMoveToTrash(target: FileCommandTarget, channelId: number, skip
             }
 
             if (interrupted || activeChannelId() !== channelId) {
-                notify({ level: 'info', title: 'Switch back to that drive to finish deleting' });
+                notify({ level: 'info', title: desktopText('Switch back to that drive to finish deleting') });
             }
 
             clearSelection();
@@ -211,7 +212,7 @@ async function runMoveToTrash(target: FileCommandTarget, channelId: number, skip
                     title: failureBatchTitle(failures.map((entry) => entry.item)),
                     body: failures.length === 1
                         ? first.error
-                        : `${first.error} Open Transfers for the rest.`,
+                        : desktopText('{detail} Open Transfers for the rest.', { detail: first.error }),
                 });
             }
             if (succeeded.length > 0) {
@@ -243,7 +244,7 @@ async function runMoveToTrash(target: FileCommandTarget, channelId: number, skip
         console.error('Delete failed:', error);
         notify({
             level: 'error',
-            title: 'Delete failed',
+            title: desktopText('Delete failed'),
             body: humanizeBackendError(error),
         });
     } finally {

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ModalShell from './ModalShell.svelte';
     import {
         joinRequestsList,
@@ -15,7 +16,9 @@
 
     const view = joinRequestsModal.state;
     const list = joinRequestsList;
-    const subtitle = $derived(`Pending requests for ${$view.payload?.title ?? 'this drive'}.`);
+    const subtitle = $derived($desktopCopy('Pending requests for {name}.', {
+        name: $view.payload?.title ?? $desktopCopy('this drive'),
+    }));
 
     function close(): void {
         joinRequestsModal.close();
@@ -24,15 +27,19 @@
     function detailFor(row: JoinRequestRow): string {
         const pieces: string[] = [];
         if (row.username) pieces.push(row.username);
-        if (row.requestedAt) pieces.push(new Date(row.requestedAt * 1000).toLocaleString());
+        if (row.requestedAt) {
+            const locale = $desktopLocale === 'en' ? undefined : $desktopLocale;
+            pieces.push(new Date(row.requestedAt * 1000).toLocaleString(locale));
+        }
         return pieces.join(' · ');
     }
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="join-requests-modal"
     open={$view.open}
-    title="Join requests"
+    title={$desktopCopy("Join requests")}
     titleId="join-requests-title"
     {subtitle}
     initialFocus="#join-requests-close"
@@ -41,14 +48,14 @@
 >
     <div id="join-requests-list" class="join-requests-list">
         {#if $list.status === 'loading'}
-            <div class="modal-empty">Loading requests…</div>
+            <div class="modal-empty">{$desktopCopy("Loading requests…")}</div>
         {:else if $list.status === 'error'}
             <div class="modal-error join-requests-error" role="alert">
-                <span>We couldn't load the requests. {$list.message}</span>
-                <button type="button" class="link-button" onclick={onRetry}>Try again</button>
+                <span>{$desktopCopy("We couldn't load the requests.")} {$list.message}</span>
+                <button type="button" class="link-button" onclick={onRetry}>{$desktopCopy("Try again")}</button>
             </div>
         {:else if $list.rows.length === 0}
-            <div class="modal-empty">No pending requests.</div>
+            <div class="modal-empty">{$desktopCopy("No pending requests.")}</div>
         {:else}
             {#each $list.rows as row (row.userId)}
                 <div class="join-request-row">
@@ -63,7 +70,7 @@
                             disabled={$list.actingUserId !== 0}
                             onclick={() => void onAction(row.userId, true)}
                         >
-                            Approve
+                            {$desktopCopy("Approve")}
                         </button>
                         <button
                             type="button"
@@ -71,7 +78,7 @@
                             disabled={$list.actingUserId !== 0}
                             onclick={() => void onAction(row.userId, false)}
                         >
-                            Reject
+                            {$desktopCopy("Reject")}
                         </button>
                     </div>
                 </div>
@@ -80,7 +87,7 @@
     </div>
 
     {#snippet actions()}
-        <button id="join-requests-close" class="secondary-btn" type="button" onclick={close}>Close</button>
+        <button id="join-requests-close" class="secondary-btn" type="button" onclick={close}>{$desktopCopy("Close")}</button>
     {/snippet}
 </ModalShell>
 

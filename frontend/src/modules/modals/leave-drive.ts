@@ -1,5 +1,6 @@
 // "Leave drive" confirm modal.
 
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { leaveSharedDrive } from '../channels';
 import { notify, dismissNotification } from '../notifications';
 import { humanizeBackendError } from '../errors';
@@ -20,7 +21,7 @@ export async function confirmLeaveDrive(target: LeaveDriveTarget): Promise<void>
     const progressId = notify({
         id: 'leaving-drive',
         level: 'info',
-        title: 'Leaving drive…',
+        title: desktopText('Leaving drive…'),
         spinner: true,
     });
 
@@ -30,14 +31,14 @@ export async function confirmLeaveDrive(target: LeaveDriveTarget): Promise<void>
         dismissNotification(progressId);
         notify({
             level: 'success',
-            title: 'Left drive',
+            title: desktopText('Left drive'),
             body: target.title ? String(target.title) : '',
         });
     } catch (err) {
         dismissNotification(progressId);
         notify({
             level: 'error',
-            title: 'Could not leave drive',
+            title: desktopText('Could not leave drive'),
             body: humanizeBackendError(err),
         });
     } finally {

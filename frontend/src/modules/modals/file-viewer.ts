@@ -5,6 +5,7 @@ import { notify } from '../notifications';
 import { accessEncryptedResource } from '../encryption';
 import { acquireScreenProtection } from '../../ui/viewers/view-only-guards';
 import { toAppError } from '../errors';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { canOpenFileViewer, fileKindLabel, fileOpenKind } from '../media-types';
 import {
     closeFileViewerView,
@@ -82,7 +83,7 @@ export function teardownFileViewerModal(): void {
 export async function openFileViewer(target: FileViewerTarget, sourceOpener?: () => Promise<MediaOpenResult>): Promise<void> {
     const kind = sourceOpener && target.kind ? target.kind : fileOpenKind(target.name);
     if (!(sourceOpener && target.kind) && !canOpenFileViewer(target.name)) {
-        notify({ level: 'warning', title: `${fileKindLabel(target.name)} files cannot be opened yet` });
+        notify({ level: 'warning', title: desktopText('{name} files cannot be opened yet', { name: fileKindLabel(target.name) }) });
         return;
     }
     const seq = ++openSeq;

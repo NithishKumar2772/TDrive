@@ -22,6 +22,7 @@
 </script>
 
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { onDestroy } from 'svelte';
     import CheckIcon from '@lucide/svelte/icons/check';
     import CircleXIcon from '@lucide/svelte/icons/circle-x';
@@ -44,15 +45,15 @@
     function formatRelative(ts: number, now: number): string {
         if (!ts) return '';
         const diffSec = Math.floor((now - ts) / 1000);
-        if (diffSec < 30) return 'just now';
-        if (diffSec < 60) return `${diffSec}s ago`;
+        if (diffSec < 30) return $desktopCopy('just now');
+        if (diffSec < 60) return $desktopCopy('{count}s ago', { count: diffSec });
         const m = Math.floor(diffSec / 60);
-        if (m < 60) return `${m} min ago`;
+        if (m < 60) return $desktopCopy('{count} min ago', { count: m });
         const h = Math.floor(m / 60);
-        if (h < 24) return `${h} hr ago`;
+        if (h < 24) return $desktopCopy('{count} hr ago', { count: h });
         const d = Math.floor(h / 24);
-        if (d < 7) return `${d}d ago`;
-        return new Date(ts).toLocaleDateString();
+        if (d < 7) return $desktopCopy('{count}d ago', { count: d });
+        return new Date(ts).toLocaleDateString($desktopLocale === 'en' ? undefined : $desktopLocale);
     }
 
     async function copyBody(): Promise<void> {
@@ -76,6 +77,7 @@
 
 <div
     class={`notif-row notif-row-event level-${event.level}${copied ? ' notif-copied' : ''}`}
+    lang={$desktopLocale}
     role={listItem ? 'listitem' : undefined}
 >
     <span class="notif-row-icon" data-kind={event.level} aria-hidden="true">
@@ -106,10 +108,10 @@
         <button
             class="notif-row-copy"
             type="button"
-            aria-label={copied ? 'Error details copied' : 'Copy error details'}
+            aria-label={copied ? $desktopCopy('Error details copied') : $desktopCopy('Copy error details')}
             onclick={() => void copyBody()}
         >
-            {copied ? 'Copied' : 'Copy details'}
+            {copied ? $desktopCopy('Copied') : $desktopCopy('Copy details')}
         </button>
     {/if}
 </div>

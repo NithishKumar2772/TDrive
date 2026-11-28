@@ -4,6 +4,7 @@
 //
 // The modal trigger lives in the top-right profile menu, not here.
 
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { logout } from '../../api';
 import { resetRenditions } from '../renditions/runtime';
 import { resetDashboardIdentity, suspendUploadHistoryForLogout } from '../auth';
@@ -23,7 +24,7 @@ export async function confirmLogout(mode: LogoutMode): Promise<void> {
     const progressId = notify({
         id: 'logout-progress',
         level: 'info',
-        title: 'Logging out…',
+        title: desktopText('Logging out…'),
         spinner: true,
     });
     logoutModal.setBusy(true);
@@ -43,7 +44,7 @@ export async function confirmLogout(mode: LogoutMode): Promise<void> {
         dismissNotification(progressId);
         notify({
             level: 'error',
-            title: 'Could not log out',
+            title: desktopText('Could not log out'),
             body: humanizeBackendError(err),
         });
     } finally {

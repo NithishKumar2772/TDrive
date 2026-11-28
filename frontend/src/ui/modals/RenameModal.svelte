@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { tick } from 'svelte';
     import ModalShell from './ModalShell.svelte';
     import {
@@ -64,21 +65,23 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="rename-modal"
     open={$renameModalState.open}
-    title={isFolder ? 'Rename folder' : 'Rename file'}
+    title={isFolder ? $desktopCopy('Rename folder') : $desktopCopy('Rename file')}
     titleId="rename-modal-title"
-    subtitle={isFolder ? 'Choose a new folder name.' : 'Choose a new file name.'}
+    subtitle={isFolder ? $desktopCopy('Choose a new folder name.') : $desktopCopy('Choose a new file name.')}
     initialFocus="#rename-input"
     restoreFocus="#file-list"
     onClose={close}
 >
-    <label class="field-label" for="rename-input">{isFolder ? 'Folder name' : 'File name'}</label>
+    <label class="field-label" for="rename-input">{isFolder ? $desktopCopy('Folder name') : $desktopCopy('File name')}</label>
     <input
         id="rename-input"
         type="text"
+        dir="auto"
         aria-describedby={$renameModalState.error ? 'rename-error' : undefined}
-        placeholder="Name"
+        placeholder={$desktopCopy("Name")}
         autocomplete="off"
         bind:this={inputEl}
         bind:value={name}
@@ -97,7 +100,7 @@
             disabled={$renameModalState.inFlight}
             onclick={close}
         >
-            Cancel
+            {$desktopCopy("Cancel")}
         </button>
         <button
             id="rename-confirm"
@@ -106,7 +109,7 @@
             disabled={$renameModalState.inFlight || !name.trim()}
             onclick={submit}
         >
-            Rename
+            {$desktopCopy("Rename")}
         </button>
     {/snippet}
 </ModalShell>

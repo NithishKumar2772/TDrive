@@ -43,6 +43,7 @@ import { bindSwipeActions } from '../ui/file-list/swipe-actions';
 import { openMoveModal } from './modals/move';
 import { showRowContextMenu } from './context-menu';
 import type { FileCommandItem, FileListAction, FileListFileRow, FileListRow, FileListUploaderChip, FileThumbnailIdentity, FolderCommandItem, FolderListRow, PendingFolderListRow } from '../ui/file-list/types';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 type FileRowInput = {
     id?: string | number;
@@ -565,7 +566,7 @@ function deleteRow(row: InteractiveFileListRow) {
         return;
     }
     if (!row.canDelete) {
-        notify({ level: 'info', title: 'You can only delete files you uploaded' });
+        notify({ level: 'info', title: desktopText('You can only delete files you uploaded') });
         return;
     }
     void moveToTrash({
@@ -588,7 +589,7 @@ function renameRow(row: InteractiveFileListRow) {
         return;
     }
     if (!row.canRename) {
-        notify({ level: 'info', title: 'You can only rename files you uploaded' });
+        notify({ level: 'info', title: desktopText('You can only rename files you uploaded') });
         return;
     }
     openRenameModal(fileCommandFor(row, row.parentId || state.currentFolderId));

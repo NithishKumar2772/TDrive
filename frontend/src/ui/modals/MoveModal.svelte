@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
     import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
     import FolderIcon from '@lucide/svelte/icons/folder';
@@ -25,20 +26,20 @@
     const rootName = $derived.by(() => {
         const { personal, shared, activeChannelId } = $sidebarState;
         const active = [...personal, ...shared].find((drive) => drive.id === activeChannelId);
-        return active?.title?.trim() || 'My Drive';
+        return active?.title?.trim() || $desktopCopy('My Drive');
     });
 
     const currentId = $derived($browse.path[$browse.path.length - 1]?.id ?? '');
     // The phone sheet shows the destination in its breadcrumb, so its button
     // is the short verb; the desktop dialog keeps naming the target folder.
     const currentName = $derived($browse.path[$browse.path.length - 1]?.name ?? rootName);
-    const confirmLabel = $derived(isMobilePlatform() ? 'Move here' : `Move to "${currentName}"`);
+    const confirmLabel = $derived(isMobilePlatform() ? 'Move here' : $desktopCopy('Move to "{name}"', { name: currentName }));
     // Why the move is blocked, for helper text the button points at. Busy needs
     // no reason: the spinner is the reason.
     const disabledReason = $derived.by(() => {
         if ($view.busy) return '';
-        if (currentId === $browse.sourceParent) return 'The items are already in this folder.';
-        if ($browse.blocked.has(currentId)) return "You can't move a folder into itself.";
+        if (currentId === $browse.sourceParent) return $desktopCopy('The items are already in this folder.');
+        if ($browse.blocked.has(currentId)) return $desktopCopy("You can't move a folder into itself.");
         return '';
     });
     const confirmDisabled = $derived(
@@ -67,6 +68,7 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="move-modal"
     open={$view.open}
     titleId="move-modal-title"
@@ -78,8 +80,8 @@
 >
     {#snippet header()}
         <div class="move-modal-header">
-            <h3 id="move-modal-title" class="modal-title">{$view.payload?.title ?? 'Move item'}</h3>
-            <p id="move-modal-subtitle" class="modal-subtitle">Select destination folder</p>
+            <h3 id="move-modal-title" class="modal-title">{$view.payload?.title ?? $desktopCopy('Move item')}</h3>
+            <p id="move-modal-subtitle" class="modal-subtitle">{$desktopCopy("Select destination folder")}</p>
         </div>
     {/snippet}
 
@@ -88,7 +90,7 @@
             id="move-back"
             class="move-back-btn"
             type="button"
-            aria-label="Back"
+            aria-label={$desktopCopy("Back")}
             disabled={$browse.path.length === 0 || $view.busy}
             onclick={onBack}
         >
@@ -119,9 +121,9 @@
 
     <div id="move-list" class="move-list">
         {#if $browse.listing.status === 'loading'}
-            <div class="move-list-empty">Loading folders…</div>
+            <div class="move-list-empty">{$desktopCopy("Loading folders…")}</div>
         {:else if $browse.listing.folders.length === 0}
-            <div class="move-list-empty">No folders here.</div>
+            <div class="move-list-empty">{$desktopCopy("No folders here.")}</div>
         {:else}
             {#each $browse.listing.folders as folder (folder.id)}
                 <button
@@ -135,7 +137,7 @@
                     </span>
                     <span class="move-item-name">{folder.name}</span>
                     {#if $browse.blocked.has(folder.id)}
-                        <span class="move-item-reason">Can't move here</span>
+                        <span class="move-item-reason">{$desktopCopy("Can't move here")}</span>
                     {:else}
                         <ChevronRightIcon class="move-item-arrow" size={16} strokeWidth={2} aria-hidden="true" />
                     {/if}
@@ -152,7 +154,7 @@
 
     {#snippet actions()}
         <button id="move-cancel" class="secondary-btn" type="button" disabled={$view.busy} onclick={close}>
-            Cancel
+            {$desktopCopy("Cancel")}
         </button>
         <button
             id="move-confirm"

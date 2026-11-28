@@ -1,5 +1,6 @@
 // Admin modal for approval-required Telegram invite links.
 
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { approveJoinRequest, listJoinRequests, rejectJoinRequest } from '../channels';
 import type { DriveChannel, JoinRequest } from '../../types';
 import { notify } from '../notifications';
@@ -17,14 +18,14 @@ export async function openJoinRequestsModal(drive: Pick<DriveChannel, 'id' | 'ti
     if (!driveId) return;
 
     activeDriveId = driveId;
-    joinRequestsModal.open({ driveId, title: String(drive?.title || 'this drive') });
+    joinRequestsModal.open({ driveId, title: String(drive?.title || desktopText('this drive')) });
     await loadRequests();
 }
 
 function toRow(request: JoinRequest): JoinRequestRow {
     return {
         userId: request.userId,
-        displayName: request.displayName.trim() || `User ${request.userId || ''}`,
+        displayName: request.displayName.trim() || desktopText('User {id}', { id: String(request.userId || '') }),
         username: request.username,
         requestedAt: request.requestedAt,
     };
@@ -71,7 +72,7 @@ export async function resolveRequest(userId: number, approved: boolean): Promise
     } catch (err) {
         notify({
             level: 'error',
-            title: `Could not ${approved ? 'approve' : 'reject'} request`,
+            title: approved ? desktopText('Could not approve request') : desktopText('Could not reject request'),
             body: humanizeBackendError(err),
         });
         joinRequestsList.update((view) =>

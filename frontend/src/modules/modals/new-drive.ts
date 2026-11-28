@@ -1,5 +1,6 @@
 // "New shared drive" modal.
 
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { createSharedDrive } from '../channels';
 import { openShareDriveModal } from './share-drive';
 import { notify, dismissNotification } from '../notifications';
@@ -15,7 +16,7 @@ export async function submitNewDrive(title: string, requireApproval: boolean): P
     const progressId = notify({
         id: 'creating-drive',
         level: 'info',
-        title: 'Creating drive…',
+        title: desktopText('Creating drive…'),
         spinner: true,
     });
     newDriveModal.setBusy(true);
@@ -23,7 +24,7 @@ export async function submitNewDrive(title: string, requireApproval: boolean): P
         const info = await createSharedDrive(title, requireApproval);
         newDriveModal.close();
         dismissNotification(progressId);
-        notify({ level: 'success', title: `Drive "${title}" created` });
+        notify({ level: 'success', title: desktopText('Drive "{name}" created', { name: title }) });
         if (info.inviteLink) {
             openShareDriveModal(info.inviteLink, { approvalRequired: requireApproval });
         }
@@ -31,7 +32,7 @@ export async function submitNewDrive(title: string, requireApproval: boolean): P
         dismissNotification(progressId);
         notify({
             level: 'error',
-            title: 'Could not create drive',
+            title: desktopText('Could not create drive'),
             body: humanizeBackendError(err),
         });
     } finally {

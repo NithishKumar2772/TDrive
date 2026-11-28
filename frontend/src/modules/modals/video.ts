@@ -1,4 +1,5 @@
 import { state as appState } from '../../state';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { PlaybackResume, playbackResumeKey } from '../video/playback-resume';
 import { acquireScreenProtection, bindViewOnlyGuards } from '../../ui/viewers/view-only-guards';
 import { htmlPictureStyle, loadPlaybackPreferences, normalizePlaybackPreferences, savePlaybackPreferences, type PlaybackPreferences, type PictureMode } from "../video/playback-preferences";
@@ -239,19 +240,19 @@ function updateLoadingStatus() {
         return;
     }
     if (!activeAdapter) {
-        videoDOM.loadingStatus.textContent = "Opening video";
+        videoDOM.loadingStatus.textContent = desktopText("Opening video");
         return;
     }
     const activity = streamActivity.label;
     if (activity === "Rate-limited") {
-        videoDOM.loadingStatus.textContent = "Buffering · Rate-limited";
+        videoDOM.loadingStatus.textContent = desktopText("Buffering · Rate-limited");
         return;
     }
     if (activity.startsWith("Streaming ")) {
-        videoDOM.loadingStatus.textContent = `Buffering · ${activity.slice("Streaming ".length)}`;
+        videoDOM.loadingStatus.textContent = desktopText("Buffering · {rate}", { rate: activity.slice("Streaming ".length) });
         return;
     }
-    videoDOM.loadingStatus.textContent = "Buffering";
+    videoDOM.loadingStatus.textContent = desktopText("Buffering");
 }
 
 function setLoadingStatusOverride(message: string) {
@@ -276,7 +277,7 @@ function setError(message: string, primary: ErrorAction | null = null) {
     releaseScreenProtection = null;
     hasError = true;
     errorPrimaryAction = primary;
-    if (videoDOM.errorRetryButton) videoDOM.errorRetryButton.textContent = primary ? primary.label : "Retry";
+    if (videoDOM.errorRetryButton) videoDOM.errorRetryButton.textContent = primary ? primary.label : desktopText("Retry");
     loadingStatusOverride = "";
     setLoading(false);
     streamActivity.stop();
@@ -292,7 +293,7 @@ function clearError() {
     const restoreFocus = Boolean(videoDOM.error?.contains(document.activeElement));
     hasError = false;
     errorPrimaryAction = null;
-    if (videoDOM.errorRetryButton) videoDOM.errorRetryButton.textContent = "Retry";
+    if (videoDOM.errorRetryButton) videoDOM.errorRetryButton.textContent = desktopText("Retry");
     videoDOM.errorMessage?.replaceChildren();
     if (videoDOM.error) videoDOM.error.style.display = "none";
     videoDOM.modal?.classList.remove("is-video-error");
@@ -313,7 +314,7 @@ function retryVideoOpen() {
 
 function handleHtmlPlaybackError(detail: string) {
     console.error("HTML video playback failed:", detail);
-    setError("The embedded player could not continue playing this video. Try again.");
+    setError(desktopText("The embedded player could not continue playing this video. Try again."));
 }
 
 
@@ -369,20 +370,17 @@ export function updatePlaybackPreferences(value: PlaybackPreferences): void {
 }
 
 const PICTURE_MODES: PictureMode[] = ["fit", "fill", "original", "16:9", "4:3"];
-const PICTURE_LABELS: Record<PictureMode, string> = { fit: "Fit", fill: "Fill", original: "Original", "16:9": "16:9", "4:3": "4:3" };
 // A phone's control row is a few hundred pixels wide and every pill on it
 // competes for the same space. "Original" alone is wide enough to push the row
 // onto a second line, so the pill says the short form and the description the
 // button announces stays the full one.
-const PICTURE_PILL_LABELS: Record<PictureMode, string> = { ...PICTURE_LABELS, original: "Orig" };
-
 function syncAspectButton() {
     const button = byID("video-aspect-button");
     if (!button) return;
     const mode = playbackPreferences.pictureMode;
-    const label = PICTURE_LABELS[mode];
-    button.textContent = isMobilePlatform() ? PICTURE_PILL_LABELS[mode] : label;
-    button.title = `Video fit: ${label}. Click to cycle`;
+    const label = mode === "fit" ? desktopText("Fit") : mode === "fill" ? desktopText("Fill") : mode === "original" ? desktopText("Original") : mode;
+    button.textContent = isMobilePlatform() && mode === "original" ? "Orig" : label;
+    button.title = desktopText("Video fit: {mode}. Click to cycle", { mode: label });
     button.setAttribute("aria-label", button.title);
 }
 
@@ -607,7 +605,8 @@ const mediaPrefetcher = new MediaPrefetcher<MediaOpenResult>({
 const VIDEO_SCOPE_CHANGED = new Error("The original video is unavailable. Open it again from its original location.");
 
 function showVideoScopeError() {
-    setError(VIDEO_SCOPE_CHANGED.message, { label: "Back to files", run: () => void closeVideoModal() });
+    setError(desktopText("The original video is unavailable. Open it again from its original location."),
+        { label: desktopText("Back to files"), run: () => void closeVideoModal() });
 }
 
 function videoScopeMatches(target: VideoOpenTarget, scope: VideoOpenScope, info?: MediaOpenInfo): boolean {
@@ -847,7 +846,7 @@ function setProtectedPlayback(protectedContent: boolean): void {
 }
 
 function updateMediaText(name: string, size: number, title = "") {
-    if (videoDOM.filename) videoDOM.filename.textContent = title || name || "Video";
+    if (videoDOM.filename) videoDOM.filename.textContent = title || name || desktopText("Video");
     mediaMetaBaseText = `${videoFormatLabel(name)}${size ? ` · ${formatBytes(size)}` : ""}`;
     mediaMetaBytes = size || 0;
     renderMediaMeta();
@@ -855,7 +854,11 @@ function updateMediaText(name: string, size: number, title = "") {
 
 function renderMediaMeta() {
     if (!videoDOM.meta) return;
-    const activity = streamActivity.label;
+    const currentActivity = streamActivity.label;
+    const activity = currentActivity === "Rate-limited" ? desktopText("Rate-limited")
+        : currentActivity.startsWith("Streaming ")
+            ? desktopText("Streaming {rate}", { rate: currentActivity.slice("Streaming ".length) })
+            : currentActivity;
     videoDOM.meta.textContent = activity ? `${mediaMetaBaseText} · ${activity}` : mediaMetaBaseText;
 }
 
@@ -866,8 +869,8 @@ function syncPlaylistButton() {
     if (!button) return;
     button.hidden = !available;
     const position = available ? activePlaylist!.currentIndex + 1 : 0;
-    button.setAttribute("aria-label", available ? `Playlist, ${position} of ${count}` : "Playlist");
-    button.title = available ? `Playlist (${position} of ${count})` : "Playlist";
+    button.setAttribute("aria-label", available ? desktopText("Playlist, {position} of {count}", { position, count }) : desktopText("Playlist"));
+    button.title = available ? desktopText("Playlist ({position} of {count})", { position, count }) : desktopText("Playlist");
 }
 
 function syncPlaylistSnapshot() {
@@ -1057,7 +1060,7 @@ async function openHtmlPlayback(attempt: VideoOpenAttempt, isCurrent: () => bool
             return;
         }
         console.error("OpenMedia failed:", err);
-        setError(errorMessage(err, "Could not open this video. Try again."));
+        setError(errorMessage(err, desktopText("Could not open this video. Try again.")));
     }
 }
 
@@ -1083,17 +1086,17 @@ function handleHtmlMediaError(
     if (undecodable && !isMobilePlatform()) {
         attempt.nativeFallbackRequested = true;
         const intent = capturePlaybackIntent(state, attempt.pausedByUser);
-        setLoadingStatusOverride("Switching to a compatible player...");
+        setLoadingStatusOverride(desktopText("Switching to a compatible player..."));
         setLoading(true);
         void promoteHtmlToNative(attempt, adapter, intent);
         return;
     }
 
     const message = code === 2
-        ? "The video stream was interrupted. Check your connection and try again."
+        ? desktopText("The video stream was interrupted. Check your connection and try again.")
         : undecodable
-            ? "This video can't be played on this device."
-            : "The embedded player could not continue playing this video. Try again.";
+            ? desktopText("This video can't be played on this device.")
+            : desktopText("The embedded player could not continue playing this video. Try again.");
     // A repackaged container that still will not decode has nothing left to
     // retry: the streams inside are ones this device has no decoder for. Point
     // at the one thing that can still work rather than at a button that cannot.
@@ -1110,7 +1113,7 @@ function handleHtmlMediaError(
 // sheet hands it to an app that can.
 function downloadInstead(target: VideoOpenTarget): ErrorAction {
     return {
-        label: "Download",
+        label: desktopText("Download"),
         run: () => {
             appActions().downloadFile({ id: target.id, name: target.name, size: target.size || 0 });
             void closeVideoModal();
@@ -1128,7 +1131,7 @@ async function promoteHtmlToNative(
         const existing = detachHtmlForNative(adapter);
         if (!existing) return;
 
-        setLoadingStatusOverride("Switching to a compatible player...");
+        setLoadingStatusOverride(desktopText("Switching to a compatible player..."));
         setLoading(true);
         if (!isCurrent() || !isOpen()) {
             await safelyCloseMedia(existing.token);
@@ -1222,10 +1225,10 @@ async function openNativePlayback(
         // handoff can race a dead token; report that as the interruption it is.
         const sessionLost = Boolean(existing) && /session not found/i.test(errorDetail(err));
         setError(sessionLost
-            ? "The video stream was interrupted. Check your connection and try again."
+            ? desktopText("The video stream was interrupted. Check your connection and try again.")
             : errorMessage(err, existing
-                ? "The compatible player could not open this video. Try again."
-                : "Could not open this video. Try again."));
+                ? desktopText("The compatible player could not open this video. Try again.")
+                : desktopText("Could not open this video. Try again.")));
     }
 }
 
@@ -1243,7 +1246,7 @@ function handleNativeMediaError(attempt: VideoOpenAttempt, token: string, detail
     void playbackTransitions.run(attempt.generation, async (isCurrent) => {
         if (!isCurrent() || activeNative?.token !== token) return;
         if (isOpen()) {
-            setError("The compatible player stopped unexpectedly. Try again.");
+            setError(desktopText("The compatible player stopped unexpectedly. Try again."));
         }
         await releaseActive();
     });
@@ -1788,7 +1791,7 @@ export function activateVideoModal(): () => void {
         isOpen,
         getActivePanel: getActiveVideoPanel,
         revealChrome,
-        reportSurfaceError: () => setError("Could not prepare the video player. Try again."),
+        reportSurfaceError: () => setError(desktopText("Could not prepare the video player. Try again.")),
     });
     transport = new VideoTransportController({
         dom: videoDOM,

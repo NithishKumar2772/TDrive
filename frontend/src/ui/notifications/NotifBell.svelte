@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { onDestroy } from 'svelte';
     import BellIcon from '@lucide/svelte/icons/bell';
     import FailedUploadReports from './FailedUploadReports.svelte';
@@ -9,7 +10,6 @@
     import ResumableUploadRow from './ResumableUploadRow.svelte';
     import ResumableDownloadRow from './ResumableDownloadRow.svelte';
     import { resumableDownloads } from '../../modules/resumable-downloads';
-    import { locale } from '../i18n/locale-store';
     import { workspaceText } from '../i18n/workspace-messages';
     import { hasActiveModal } from '../modals/modal-a11y';
     import { portal } from './portal';
@@ -72,14 +72,16 @@
     const activeCount = $derived($visibleActive.length + $resumableUploads.length + $resumableDownloads.length + queued.length);
     const bellLabel = $derived(
         $bellMode === 'error'
-            ? `Notifications, ${$notifUnreadErrors} ${$notifUnreadErrors === 1 ? 'error' : 'errors'}`
+            ? ($notifUnreadErrors === 1 ? $desktopCopy('Notifications, {count} error', { count: $notifUnreadErrors })
+                : $desktopCopy('Notifications, {count} errors', { count: $notifUnreadErrors }))
             : activeCount > 0
               ? $resumableUploads.length + $resumableDownloads.length > 0
-                  ? `Notifications, ${activeCount} transfer${activeCount === 1 ? '' : 's'} in progress or waiting`
-                  : `Notifications, ${activeCount} transfer${activeCount === 1 ? '' : 's'} in progress`
-              : workspaceText('notifications', $locale),
+                  ? (activeCount === 1 ? $desktopCopy('Notifications, {count} transfer in progress or waiting', { count: activeCount })
+                      : $desktopCopy('Notifications, {count} transfers in progress or waiting', { count: activeCount }))
+                  : (activeCount === 1 ? $desktopCopy('Notifications, {count} transfer in progress', { count: activeCount })
+                      : $desktopCopy('Notifications, {count} transfers in progress', { count: activeCount }))
+              : workspaceText('notifications', $desktopLocale),
     );
-    const bellLanguage = $derived($bellMode === 'error' || activeCount > 0 ? 'en' : $locale);
 
     function reanchor(): void {
         if (!bellEl) return;
@@ -222,7 +224,7 @@
     aria-controls={$notifPanelOpen ? 'notif-panel' : 'activity-modal'}
     aria-expanded={$notifPanelOpen || $activityView.open ? 'true' : 'false'}
     aria-label={bellLabel}
-    lang={bellLanguage}
+    lang={$desktopLocale}
     onclick={(event) => {
         event.stopPropagation();
         toggleActivity();
@@ -246,7 +248,7 @@
         role="dialog"
         aria-modal="false"
         aria-labelledby="notif-panel-title"
-        lang="en"
+        lang={$desktopLocale}
         tabindex="-1"
         style={`top:${anchor.top}px; right:${anchor.right}px;`}
         use:portal
@@ -256,7 +258,7 @@
         onclick={(event) => event.stopPropagation()}
     >
         <div class="notif-panel-header">
-            <h2 id="notif-panel-title" class="notif-panel-title" lang={$locale}>{workspaceText('notifications', $locale)}</h2>
+            <h2 id="notif-panel-title" class="notif-panel-title">{workspaceText('notifications', $desktopLocale)}</h2>
             <div class="notif-panel-actions">
                 <button
                     class="notif-panel-clear"
@@ -264,14 +266,14 @@
                     disabled={$visibleRecent.length === 0 && !finishedBatches}
                     onclick={() => { onClearHistory(); clearUploadActivityHistory(); }}
                 >
-                    Clear
+                    {$desktopCopy('Clear')}
                 </button>
             </div>
         </div>
         <div class="notif-panel-body">
             <FailedUploadReports reports={$failedUploadReports} onReview={reviewFailedUploads} onDismiss={dismissFailedUploadReport} />
             {#if activeCount > 0}
-                <h3 id="notif-section-active" class="notif-section-label">{$resumableUploads.length + $resumableDownloads.length > 0 ? 'Transfers' : 'Active'}</h3>
+                <h3 id="notif-section-active" class="notif-section-label">{$resumableUploads.length + $resumableDownloads.length > 0 ? $desktopCopy('Transfers') : $desktopCopy('Active')}</h3>
                 <div class="notif-section" role="list" aria-labelledby="notif-section-active">
                     {#each $resumableUploads as job (job.jobId)}
                         <div role="listitem"><ResumableUploadRow {job} onOpen={() => openFullActivity(`upload:${job.jobId}`)} /></div>
@@ -293,7 +295,7 @@
                 </div>
             {/if}
             {#if $visibleRecent.length > 0}
-                <h3 id="notif-section-recent" class="notif-section-label">Recent</h3>
+                <h3 id="notif-section-recent" class="notif-section-label">{$desktopCopy('Recent')}</h3>
                 <div class="notif-section" role="list" aria-labelledby="notif-section-recent">
                     {#each $visibleRecent.slice(0, 50) as entry (entry.id)}
                         {#if entry.kind === 'transfer'}
@@ -308,12 +310,12 @@
                     <div class="notif-empty-glyph">
                         <BellIcon size={48} strokeWidth={1.8} aria-hidden="true" />
                     </div>
-                    <div class="notif-empty-title">All caught up</div>
-                    <div class="notif-empty-body">Folder activity, uploads, and shared-drive events will show up here.</div>
+                    <div class="notif-empty-title">{$desktopCopy('All caught up')}</div>
+                    <div class="notif-empty-body">{$desktopCopy('Folder activity, uploads, and shared-drive events will show up here.')}</div>
                 </div>
             {/if}
         </div>
-        <button class="view-all-activity" type="button" onclick={() => openFullActivity()}>View all activity</button>
+        <button class="view-all-activity" type="button" onclick={() => openFullActivity()}>{$desktopCopy('View all activity')}</button>
     </div>
 {/if}
 

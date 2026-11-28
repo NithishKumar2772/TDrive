@@ -57,6 +57,7 @@ import {
 import { sidebarState } from '../ui/sidebar/sidebar-store';
 import { createUploadQueue, nextUploadActivityId } from './upload-queue';
 import { clearUploadActivities, finishUploadActivity, mergeUploadActivityFiles, updateUploadActivity, uploadActivities, uploadsPaused, updateUploadActivityFile, type NewUploadActivity, type UploadActivityFile } from '../ui/notifications/upload-activity-store';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 let transferUnsubscribers: RuntimeUnsubscribe[] = [];
 let stopTransferPersistence: (() => void) | null = null;
@@ -209,8 +210,8 @@ async function announceMobileDownload(item: DownloadQueueItem, savedPath: string
             note('Saved inside TDrive, not in your Downloads folder');
             notify({
                 level: 'warning',
-                title: 'Could not reach your Downloads folder',
-                body: `${item.name} is saved inside TDrive. Try saving it again from Transfers.`,
+                title: desktopText('Could not reach your Downloads folder'),
+                body: desktopText('{name} is saved inside TDrive. Try saving it again from Transfers.', { name: item.name }),
             });
             return false;
         }
@@ -270,8 +271,8 @@ async function startNextDownload() {
             else if (next.kind === 'folder') {
                 notify({
                     level: 'success',
-                    title: 'Folder downloaded',
-                    body: result.savedPath ? 'Saved to ' + result.savedPath : next.name + ' saved',
+                    title: desktopText('Folder downloaded'),
+                    body: result.savedPath ? desktopText('Saved to {path}', { path: result.savedPath }) : desktopText('{name} saved', { name: next.name }),
                 });
             }
             if (saved && result.jobId) await acknowledgeCompletedDownload(next.channelId, result.jobId);
@@ -373,11 +374,15 @@ function finalizeDownload(key: string, status: 'done' | 'failed' | 'canceled'): 
 // only status, not the reason the download failed.
 function notifyDownloadFailure(item: DownloadQueueItem, error: OperationError | string): void {
     const reason = humanizeBackendError(error);
-    const noun = item.kind === 'folder' ? 'Folder' : 'File';
     // The row keeps the reason; the toast is the transient copy of it.
     if (reason) setTransferNote({ id: item.key, direction: 'down', note: reason });
     if (typeof error !== 'string' && error.code === 'already_exists') {
-        notify({ level: 'warning', title: noun + ' already exists', body: reason, history: false });
+        notify({
+            level: 'warning',
+            title: item.kind === 'folder' ? desktopText('Folder already exists') : desktopText('File already exists'),
+            body: reason,
+            history: false,
+        });
         return;
     }
     // In the shade too, where a failure that happened while the user was
@@ -386,8 +391,8 @@ function notifyDownloadFailure(item: DownloadQueueItem, error: OperationError | 
     // row they are already looking at.
     void postSystemNotification({
         kind: 'problem',
-        title: `Couldn't download ${item.name}`,
-        text: reason || 'The download could not be completed.',
+        title: desktopText('Couldn\'t download {name}', { name: item.name }),
+        text: reason || desktopText('The download could not be completed.'),
         action: retryTransferAction(transferKey('down', item.key)),
     }).catch(() => undefined);
 
@@ -399,11 +404,11 @@ function notifyDownloadFailure(item: DownloadQueueItem, error: OperationError | 
     notify({
         id: toastId,
         level: 'error',
-        title: `Couldn't download ${item.name}`,
-        body: reason || 'The download could not be completed.',
+        title: desktopText('Couldn\'t download {name}', { name: item.name }),
+        body: reason || desktopText('The download could not be completed.'),
         history: false,
         action: {
-            label: 'Retry',
+            label: desktopText('Retry'),
             // One shot. The toast stays up for a while, so without this it sits there
             // offering to retry a download that is already running again, and
             // a second tap re-queues a key that is mid-flight -- which resets
@@ -549,7 +554,7 @@ async function releasePickedSources(paths: string[]): Promise<void> {
 }
 async function withUploadSelection(run: () => Promise<void>): Promise<void> {
     if (selectionBusy) {
-        notify({ level: 'info', title: 'A transfer is already in progress', body: 'Finish the current file selection first.' });
+        notify({ level: 'info', title: desktopText('A transfer is already in progress'), body: desktopText('Finish the current file selection first.') });
         return;
     }
     const generation = transferSurfaceGeneration;
@@ -585,7 +590,7 @@ function enqueueUpload(activity: NewUploadActivity, destination: UploadDestinati
     } });
 }
 export async function withTransferFlow(run: () => Promise<void>): Promise<void> {
-    if (!await tryWithTransferFlow(run)) notify({ level: 'info', title: 'A transfer is already in progress', body: 'Wait for it to finish, then start another.' });
+    if (!await tryWithTransferFlow(run)) notify({ level: 'info', title: desktopText('A transfer is already in progress'), body: desktopText('Wait for it to finish, then start another.') });
 }
 /** Recovery never replaces an active upload or a pending user selection. */
 export async function tryWithTransferFlow(run: () => Promise<void>): Promise<boolean> {
@@ -611,7 +616,7 @@ export async function setUploadsPaused(paused: boolean): Promise<void> {
         await (paused ? pauseUploads() : resumeUploads());
         uploadsPaused.set(paused);
     } catch (error) {
-        notify({ level: 'error', title: paused ? 'Could not pause uploads' : 'Could not resume uploads', body: humanizeBackendError(error) });
+        notify({ level: 'error', title: paused ? desktopText('Could not pause uploads') : desktopText('Could not resume uploads'), body: humanizeBackendError(error) });
     }
 }
 
@@ -718,8 +723,10 @@ function importFileUpdates(payload: Record<string, unknown>): Array<Pick<UploadA
 }
 
 function formatImportResultLabel(uploaded: number, failedUploads = 0) {
-    const imported = uploaded === 1 ? 'Imported 1 file' : `Imported ${uploaded} files`;
-    return failedUploads > 0 ? `${imported} · ${failedUploads} failed` : imported;
+    const imported = uploaded === 1 ? desktopText('Imported 1 file') : desktopText('Imported {count} files', { count: uploaded });
+    if (failedUploads === 0) return imported;
+    const failed = desktopText('{count} failed', { count: failedUploads });
+    return `${imported} · ${failed}`;
 }
 
 // refreshImportRow renders one constant-size aggregate supplied by the backend.
@@ -825,7 +832,7 @@ function finalizeUploadBatch(uploadThrew: boolean, failures?: UploadFailure[]): 
     if (batchReasons && !failures?.length) {
         notify({
             level: 'error',
-            title: batch.failures === 1 ? "Couldn't upload 1 file" : `Couldn't upload ${batch.failures} files`,
+            title: batch.failures === 1 ? desktopText('Couldn\'t upload 1 file') : desktopText('Couldn\'t upload {count} files', { count: batch.failures }),
             body: batchReasons,
             history: false,
         });
@@ -993,7 +1000,7 @@ function activateUploadProgressEvents(): void {
         if (errorBody && !canceled) {
             notify({
                 level: 'error',
-                title: filename ? `Couldn't upload "${filename}"` : 'Upload failed',
+                title: filename ? desktopText('Couldn\'t upload "{name}"', { name: filename }) : desktopText('Upload failed'),
                 body: errorBody,
                 history: false,
             });
@@ -1001,7 +1008,7 @@ function activateUploadProgressEvents(): void {
             // row exists, so the only honest offer is none.
             void postSystemNotification({
                 kind: 'problem',
-                title: filename ? `Couldn't upload ${filename}` : 'Upload failed',
+                title: filename ? desktopText('Couldn\'t upload {name}', { name: filename }) : desktopText('Upload failed'),
                 text: errorBody,
             }).catch(() => undefined);
         }
@@ -1082,20 +1089,20 @@ function activateUploadProgressEvents(): void {
                 updateUploadActivity(activeUploadActivityId, { fileCount: scheduled });
             }
             const activityError = errorCount || fatalError ? reasons[0] : undefined;
-            const detail = activityError ?? (failedUploads ? `${failedUploads} files failed` : undefined);
+            const detail = activityError ?? (failedUploads ? desktopText('{count} files failed', { count: failedUploads }) : undefined);
             finishUploadActivity(activeUploadActivityId, status, [], [interruption, detail].filter(Boolean).join(' ') || undefined);
         }
         const resultLabel = formatImportResultLabel(uploaded, failedUploads);
         if (!state.importBatch) {
-            pushTransferStart({ id: IMPORT_TRANSFER_ID, direction: 'up', name: 'Import completed', total: uploaded + failedUploads });
+            pushTransferStart({ id: IMPORT_TRANSFER_ID, direction: 'up', name: desktopText('Import completed'), total: uploaded + failedUploads });
         }
         updateTransferName({
             id: IMPORT_TRANSFER_ID,
             direction: 'up',
             name: canceled
-                ? 'Import canceled'
+                ? desktopText('Import canceled')
                 : (fatal
-                    ? 'Import failed'
+                    ? desktopText('Import failed')
                     : resultLabel),
         });
         markTransferDone({ id: IMPORT_TRANSFER_ID, direction: 'up', status });
@@ -1106,17 +1113,23 @@ function activateUploadProgressEvents(): void {
 
         if (!canceled && (status === 'failed' || oversize > 0 || empty > 0 || conflictsSkipped > 0 || errorCount > 0)) {
             const bits: string[] = [];
-            if (failedUploads > 0) bits.push(`${failedUploads} failed`);
-            if (oversize > 0) bits.push(`${oversize} skipped (too large)`);
-            if (empty > 0) bits.push(`${empty} empty ${empty === 1 ? 'file' : 'files'} skipped`);
-            if (conflictsSkipped > 0) bits.push(`${conflictsSkipped} ${conflictsSkipped === 1 ? 'file' : 'files'} skipped (same name)`);
-            if (errorCount > 0) bits.push(`${errorCount} ${errorCount === 1 ? 'item' : 'items'} had errors`);
+            if (failedUploads > 0) bits.push(desktopText('{count} failed', { count: failedUploads }));
+            if (oversize > 0) bits.push(desktopText('{count} skipped (too large)', { count: oversize }));
+            if (empty > 0) bits.push(empty === 1
+                ? desktopText('1 empty file skipped')
+                : desktopText('{count} empty files skipped', { count: empty }));
+            if (conflictsSkipped > 0) bits.push(conflictsSkipped === 1
+                ? desktopText('1 file skipped (same name)')
+                : desktopText('{count} files skipped (same name)', { count: conflictsSkipped }));
+            if (errorCount > 0) bits.push(errorCount === 1
+                ? desktopText('1 item had errors')
+                : desktopText('{count} items had errors', { count: errorCount }));
             notify({
                 level: status === 'failed' ? 'error' : 'info',
                 title: fatal
-                    ? 'Import failed'
+                    ? desktopText('Import failed')
                     : resultLabel,
-                body: [...bits, ...reasons, ...(interruption ? [interruption] : [])].join('  ·  ') || 'The import stopped before it could finish.',
+                body: [...bits, ...reasons, ...(interruption ? [interruption] : [])].join('  ·  ') || desktopText('The import stopped before it could finish.'),
             });
         }
         importFailureReasons.length = 0;
@@ -1145,7 +1158,7 @@ export async function importFolderWithParentID(parentID: string) {
         }
         let dir = '';
         try { dir = await selectFolder(); }
-        catch (error) { notify({ level: 'error', title: 'Could not open the folder picker', body: humanizeBackendError(error) }); return; }
+        catch (error) { notify({ level: 'error', title: desktopText('Could not open the folder picker'), body: humanizeBackendError(error) }); return; }
         if (dir && isCurrentDestination(destination)) await importSelection(parentID, [dir], destination);
     });
 }
@@ -1160,7 +1173,7 @@ const ANDROID_UPLOAD_WINDOW = 4;
 // whole tree into the cache.
 async function importAndroidFolder(parentID: string, destination: UploadDestination) {
     if (androidFolderOwner) {
-        notify({ level: 'info', title: 'A folder is already selected', body: 'Finish or remove the current Android folder import before choosing another folder.' });
+        notify({ level: 'info', title: desktopText('A folder is already selected'), body: desktopText('Finish or remove the current Android folder import before choosing another folder.') });
         return;
     }
     const owner = Symbol('android-folder');
@@ -1196,7 +1209,7 @@ async function importAndroidFolder(parentID: string, destination: UploadDestinat
         enqueueUpload(activity, destination, () => runAndroidImport(parentID, manifest, choice.encrypt, destination), release);
         enqueued = true;
     } catch (error) {
-        if (isCurrentDestination(destination)) notify({ level: 'error', title: 'Import failed', body: humanizeBackendError(error), history: false });
+        if (isCurrentDestination(destination)) notify({ level: 'error', title: desktopText('Import failed'), body: humanizeBackendError(error), history: false });
     } finally {
         if (!enqueued) release();
     }
@@ -1406,7 +1419,7 @@ function finishAndroidImport(done: number, failed: number, fatalError: string, e
     updateTransferName({
         id: IMPORT_TRANSFER_ID,
         direction: 'up',
-        name: canceled ? 'Import canceled' : (fatalError ? 'Import failed' : resultLabel),
+        name: canceled ? desktopText('Import canceled') : (fatalError ? desktopText('Import failed') : resultLabel),
     });
     markTransferDone({
         id: IMPORT_TRANSFER_ID,
@@ -1422,13 +1435,15 @@ function finishAndroidImport(done: number, failed: number, fatalError: string, e
         // individual files are the only actionable thing the user gets.
         // The Android runner already put its fatal error into words.
         const reasons = readableReasons('', fatalError ? [fatalError, ...importFailureReasons] : importFailureReasons);
-        const bits = failed > 0 ? [`${failed} failed`] : [];
-        if (empty > 0) bits.push(`${empty} empty ${empty === 1 ? 'file' : 'files'} skipped`);
+        const bits = failed > 0 ? [desktopText('{count} failed', { count: failed })] : [];
+        if (empty > 0) bits.push(empty === 1
+            ? desktopText('1 empty file skipped')
+            : desktopText('{count} empty files skipped', { count: empty }));
         notify({
             level: fatalError || failed > 0 ? 'error' : 'info',
-            title: fatalError ? 'Import failed' : resultLabel,
+            title: fatalError ? desktopText('Import failed') : resultLabel,
             body: [...bits, ...reasons].join('  ·  ')
-                || 'The import stopped before it could finish.',
+                || desktopText('The import stopped before it could finish.'),
         });
     }
     importFailureReasons.length = 0;
@@ -1454,9 +1469,9 @@ async function importSelection(parentID: string, paths: string[], destination: U
             planImport(paths, destination.personal && remembered === true, false).catch(() => null),
         ]);
         if (!isCurrentDestination(destination)) return;
-        if (!plan) { notify({ level: 'error', title: 'Could not read the selection', body: 'Please try again.' }); return; }
+        if (!plan) { notify({ level: 'error', title: desktopText('Could not read the selection'), body: desktopText('Please try again.') }); return; }
         if (plan.limitExceeded) {
-            notify({ level: 'info', title: 'Selection is too large', body: `Keep it under ${Math.max(1, plan.maxItems || 10_000).toLocaleString()} items by removing generated/cache folders or splitting it into smaller batches.` });
+            notify({ level: 'info', title: desktopText('Selection is too large'), body: desktopText('Keep it under {value} items by removing generated/cache folders or splitting it into smaller batches.', { value: Math.max(1, plan.maxItems || 10_000).toLocaleString() }) });
             return;
         }
         const complex = plan.folders > 0 || plan.archives > 0;
@@ -1494,7 +1509,7 @@ async function importSelection(parentID: string, paths: string[], destination: U
             (reason) => { if (reason !== 'completed') void releasePickedSources(paths); });
         enqueued = true;
     } catch (error) {
-        notify({ level: 'error', title: 'Could not queue upload', body: humanizeBackendError(error) });
+        notify({ level: 'error', title: desktopText('Could not queue upload'), body: humanizeBackendError(error) });
     } finally {
         if (!enqueued) await releasePickedSources(paths);
     }
@@ -1531,8 +1546,8 @@ async function runDesktopImport(paths: string[], parentID: string, encrypt: bool
     } catch (error) {
         if (generation !== transferSurfaceGeneration) return;
         importError = humanizeBackendError(error);
-        if (!state.cancelingUpload && !importCompletion) notify({ level: 'error', title: 'Import failed', body: importError });
-        if (!importCompletion && !state.importBatch) pushTransferStart({ id: IMPORT_TRANSFER_ID, direction: 'up', name: 'Import failed', total: 0 });
+        if (!state.cancelingUpload && !importCompletion) notify({ level: 'error', title: desktopText('Import failed'), body: importError });
+        if (!importCompletion && !state.importBatch) pushTransferStart({ id: IMPORT_TRANSFER_ID, direction: 'up', name: desktopText('Import failed'), total: 0 });
     } finally {
         if (generation === transferSurfaceGeneration) {
             setTransferDirectionActive('upload', false);
@@ -1598,8 +1613,10 @@ export function reviewFailedUploads(payload: FailedUploadsPayload): void {
 
 function failedUploadBody(total: number, failed: number, reason = ''): string {
     if (failed >= total && reason) return reason;
-    const attention = `${failed} ${failed === 1 ? 'needs' : 'need'} attention.`;
-    return failed < total ? `Uploaded ${total - failed} of ${total}. ${attention}` : attention;
+    const attention = failed === 1 ? desktopText('1 needs attention.') : desktopText('{count} need attention.', { count: failed });
+    if (failed >= total) return attention;
+    const progress = desktopText('Uploaded {count} of {total}.', { count: total - failed, total });
+    return `${progress} ${attention}`;
 }
 
 function showFailedUploadNotice(payload: FailedUploadsPayload, body: string, generation: number): void {
@@ -1607,8 +1624,8 @@ function showFailedUploadNotice(payload: FailedUploadsPayload, body: string, gen
     rememberFailedUploadReport(payload);
     notify({
         // The failed batch row and its report keep this; history needs no third copy.
-        level: 'error', title: 'Upload failed', body, history: false,
-        action: { label: 'Review failed files', run: () => {
+        level: 'error', title: desktopText('Upload failed'), body, history: false,
+        action: { label: desktopText('Review failed files'), run: () => {
             if (generation !== transferSurfaceGeneration) return;
             reviewFailedUploads(payload);
         } },

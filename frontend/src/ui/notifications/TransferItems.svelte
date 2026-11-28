@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy } from '../i18n/desktop-copy';
     import XIcon from '@lucide/svelte/icons/x';
     import type { TransferItem } from './notif-store';
     import { transferItemDetail, transferItemLabel } from './transfer-view';
@@ -31,12 +32,12 @@
         {#each items as item (item.key)}
             <li class="item">
                 <span class="item-name" title={item.name}>{item.name}</span>
-                <span class="item-detail">{transferItemDetail(item)}</span>
+                <span class="item-detail">{transferItemDetail(item, $desktopCopy)}</span>
                 {#if onCancel}
                     <button
                         class="item-stop"
                         type="button"
-                        aria-label={`Stop ${item.name || 'this file'}`}
+                        aria-label={item.name ? $desktopCopy('Stop {name}', { name: item.name }) : $desktopCopy('Stop this file')}
                         onclick={() => onCancel(item.key)}
                     >
                         <XIcon size={13} strokeWidth={2} aria-hidden="true" />
@@ -47,7 +48,7 @@
                 <div
                     class="item-track"
                     role="progressbar"
-                    aria-label={transferItemLabel(item)}
+                    aria-label={transferItemLabel(item, $desktopCopy)}
                     aria-valuemin="0"
                     aria-valuemax="100"
                     aria-valuenow={Math.round(Math.max(0, Math.min(100, item.progress)))}

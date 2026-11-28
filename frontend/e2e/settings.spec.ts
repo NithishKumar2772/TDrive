@@ -185,3 +185,25 @@ test('Arabic mirrors Settings and keeps the selected language after reload', asy
     if (!ltrNav || !ltrContent) throw new Error('Settings layout did not render');
     expect(ltrNav.x).toBeLessThan(ltrContent.x);
 });
+
+test('Hindi applies to shared-drive forms, notifications, and Activity', async ({ page }) => {
+    const mock = await bootTDrive(page, {
+        CreateSharedDrive: resolves({ id: 0, title: 'QA drive', kind: 'shared' }),
+    });
+    const settings = await openSettingsSection(page, 'Language');
+    await settings.locator('#settings-language').selectOption('hi');
+    await page.keyboard.press('Escape');
+
+    await page.locator('#open-new-drive').click();
+    const dialog = page.getByRole('dialog', { name: 'नई साझा ड्राइव' });
+    await expect(dialog).toHaveAttribute('lang', 'hi');
+    await expect(dialog.getByRole('checkbox', { name: /जुड़ने के लिए मंज़ूरी ज़रूरी है/ })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'रद्द करें' })).toBeVisible();
+    await dialog.getByLabel('ड्राइव का नाम').fill('QA drive');
+    await dialog.getByRole('button', { name: 'बनाएँ', exact: true }).click();
+    await expect(page.locator('.toast-success .toast-title')).toHaveText('ड्राइव “QA drive” बन गई');
+    expect(await mock.calls('CreateSharedDrive')).toMatchObject([{ args: ['QA drive', false] }]);
+
+    await page.locator('#notif-bell').click();
+    await expect(page.locator('.activity-panel[role="dialog"]')).toHaveAttribute('lang', 'hi');
+});

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
     import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
     import XIcon from '@lucide/svelte/icons/x';
@@ -43,11 +44,11 @@
     let { transfer, onCancel, onCancelFile, onOpen }: Props = $props();
 
     const direction = $derived(transfer.direction === 'up' ? 'upload' : 'download');
-    const dirLabel = $derived(transfer.direction === 'up' ? 'Uploading' : 'Downloading');
+    const dirLabel = $derived(transfer.direction === 'up' ? $desktopCopy('Uploading') : $desktopCopy('Downloading'));
 
     const phase = $derived(transferPhase(transfer));
     const percent = $derived(transferPercent(transfer));
-    const detail = $derived(transferDetailParts(transfer));
+    const detail = $derived(transferDetailParts(transfer, undefined, $desktopCopy));
     const showProgress = $derived(isMoving(phase));
     const items = $derived(showProgress ? transfer.items ?? [] : []);
 
@@ -62,7 +63,9 @@
         : phase === 'stopped' ? 'is-canceled'
         : 'is-active',
     );
-    const progressLabel = $derived(`${dirLabel} ${transfer.name || 'transfer'}`);
+    const progressLabel = $derived(transfer.direction === 'up'
+        ? transfer.name ? $desktopCopy('Uploading {name}', { name: transfer.name }) : $desktopCopy('Uploading transfer')
+        : transfer.name ? $desktopCopy('Downloading {name}', { name: transfer.name }) : $desktopCopy('Downloading transfer'));
 
     const canCancel = $derived(
         onCancel !== undefined
@@ -78,7 +81,7 @@
         && (transfer.direction === 'up' || transfer.status === 'active'),
     );
     const cancelLabel = $derived(
-        transfer.direction === 'down' ? 'Cancel active download' : 'Cancel all uploads',
+        transfer.direction === 'down' ? $desktopCopy('Cancel active download') : $desktopCopy('Cancel all uploads'),
     );
 
     /** Figures are set apart from the muted state line; the rate is set smaller. */
@@ -92,7 +95,7 @@
     }
 </script>
 
-<div class={`notif-row notif-row-transfer ${statusClass}`} data-phase={phase}>
+<div class={`notif-row notif-row-transfer ${statusClass}`} data-phase={phase} lang={$desktopLocale}>
     <span class="notif-row-icon" data-kind={direction} aria-hidden="true">
         {#if transfer.direction === 'up'}
             <ArrowUpIcon size={14} strokeWidth={2} aria-hidden="true" />

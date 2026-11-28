@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import RotateCwIcon from '@lucide/svelte/icons/rotate-cw';
     import ListVideoIcon from '@lucide/svelte/icons/list-video';
     import VideoPlaylistPanel from "./VideoPlaylistPanel.svelte";
@@ -38,11 +39,11 @@
     import XIcon from '@lucide/svelte/icons/x';
 </script>
 
-<div id="video-shell" class="video-shell" role="dialog" aria-modal="true" aria-labelledby="video-filename" tabindex="-1">
-    <ViewerTopBar class="video-topbar" titleId="video-filename" closeId="video-close" closeLabel="Close video">
+<div lang={$desktopLocale} id="video-shell" class="video-shell" role="dialog" aria-modal="true" aria-labelledby="video-filename" tabindex="-1">
+    <ViewerTopBar class="video-topbar" titleId="video-filename" closeId="video-close" closeLabel={$desktopCopy("Close video")}>
         {#snippet meta()}
             <span id="video-meta" class="video-meta"></span>
-            <span id="video-protected" class="video-protected" title="View only. Saving and forwarding are disabled." hidden>Protected</span>
+            <span id="video-protected" class="video-protected" title={$desktopCopy("View only. Saving and forwarding are disabled.")} hidden>{$desktopCopy("Protected")}</span>
         {/snippet}
     </ViewerTopBar>
 
@@ -51,13 +52,13 @@
         <video id="video-player" class="video-player" playsinline preload="metadata"></video>
 
         <div id="video-center-controls" class="video-center-controls" aria-hidden="true" inert>
-            <button id="video-center-skip-back" class="video-center-skip video-center-skip-back" type="button" aria-label="Back 10 seconds" title="Back 10 seconds">
+            <button id="video-center-skip-back" class="video-center-skip video-center-skip-back" type="button" aria-label={$desktopCopy("Back 10 seconds")} title={$desktopCopy("Back 10 seconds")}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5H6v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 8.3A7 7 0 1112 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><text x="12" y="15.2" text-anchor="middle" fill="currentColor" font-size="6.2" font-weight="800">10</text></svg>
             </button>
-            <button id="video-center-play" class="video-center-play" type="button" aria-label="Play video" title="Play">
+            <button id="video-center-play" class="video-center-play" type="button" aria-label={$desktopCopy("Play video")} title={$desktopCopy("Play")}>
                 <PlayIcon fill="currentColor" aria-hidden="true" />
             </button>
-            <button id="video-center-skip-forward" class="video-center-skip video-center-skip-forward" type="button" aria-label="Forward 10 seconds" title="Forward 10 seconds">
+            <button id="video-center-skip-forward" class="video-center-skip video-center-skip-forward" type="button" aria-label={$desktopCopy("Forward 10 seconds")} title={$desktopCopy("Forward 10 seconds")}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 5h5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.4 8.3A7 7 0 1012 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><text x="12" y="15.2" text-anchor="middle" fill="currentColor" font-size="6.2" font-weight="800">10</text></svg>
             </button>
         </div>
@@ -67,42 +68,42 @@
         <div id="video-skip-feedback" class="video-skip-feedback" aria-hidden="true"><span></span></div>
 
         <div id="video-standalone" class="video-standalone" role="status" aria-live="polite" hidden>
-            <strong>Playing in a separate window</strong>
-            <span>Use the player window for playback controls. Closing this preview stops the video.</span>
+            <strong>{$desktopCopy("Playing in a separate window")}</strong>
+            <span>{$desktopCopy("Use the player window for playback controls. Closing this preview stops the video.")}</span>
         </div>
 
         <div id="video-loading" class="video-loading" aria-hidden="true" style="display: none;">
             <div class="video-spinner"></div>
-            <div id="video-loading-status" class="video-loading-status" role="status" aria-live="polite" aria-atomic="true">Opening video</div>
+            <div id="video-loading-status" class="video-loading-status" role="status" aria-live="polite" aria-atomic="true">{$desktopCopy("Opening video")}</div>
         </div>
 
         <div id="video-error" class="video-error" role="alert" aria-atomic="true" style="display: none;">
             <div class="video-error-copy">
-                <strong class="video-error-title">Unable to play video</strong>
+                <strong class="video-error-title">{$desktopCopy("Unable to play video")}</strong>
                 <p id="video-error-message" class="video-error-message"></p>
             </div>
             <div class="video-error-actions">
-                <button id="video-error-retry" class="video-error-action video-error-retry" type="button">Retry</button>
-                <button id="video-error-close" class="video-error-action video-error-close" type="button">Close</button>
+                <button id="video-error-retry" class="video-error-action video-error-retry" type="button">{$desktopCopy("Retry")}</button>
+                <button id="video-error-close" class="video-error-action video-error-close" type="button">{$desktopCopy("Close")}</button>
             </div>
         </div>
     </div>
 
-    <aside id="video-settings-panel" class="video-popover video-settings-panel" aria-label="Playback settings" aria-hidden="true" inert hidden>
+    <aside id="video-settings-panel" class="video-popover video-settings-panel" aria-label={$desktopCopy("Playback settings")} aria-hidden="true" inert hidden>
         <header class="video-popover-header">
-            <div class="video-popover-heading"><h2 class="video-popover-title">Playback</h2></div>
-            <button id="video-settings-close" class="video-popover-close" type="button" aria-label="Close playback settings"><XIcon size={16} strokeWidth={2} aria-hidden="true" /></button>
+            <div class="video-popover-heading"><h2 class="video-popover-title">{$desktopCopy("Playback")}</h2></div>
+            <button id="video-settings-close" class="video-popover-close" type="button" aria-label={$desktopCopy("Close playback settings")}><XIcon size={16} strokeWidth={2} aria-hidden="true" /></button>
         </header>
-        <nav class="video-settings-tabs" aria-label="Playback settings sections">
-            <button type="button" data-settings-section="picture">Picture</button>
-            <button type="button" data-settings-section="audio">Audio</button>
-            <button type="button" data-settings-section="subtitle">Subtitles</button>
-            <button type="button" data-settings-section="speed">Speed</button>
+        <nav class="video-settings-tabs" aria-label={$desktopCopy("Playback settings sections")}>
+            <button type="button" data-settings-section="picture">{$desktopCopy("Picture")}</button>
+            <button type="button" data-settings-section="audio">{$desktopCopy("Audio")}</button>
+            <button type="button" data-settings-section="subtitle">{$desktopCopy("Subtitles")}</button>
+            <button type="button" data-settings-section="speed">{$desktopCopy("Speed")}</button>
         </nav>
         <div class="video-popover-body video-settings-body">
-            <div id="video-audio-menu" class="video-menu video-track-menu" role="group" aria-label="Audio track"></div>
-            <div id="video-subtitle-menu" class="video-menu video-track-menu" role="group" aria-label="Subtitles"></div>
-            <div id="video-speed-menu" class="video-menu video-speed-menu" role="group" aria-label="Playback speed"></div>
+            <div id="video-audio-menu" class="video-menu video-track-menu" role="group" aria-label={$desktopCopy("Audio track")}></div>
+            <div id="video-subtitle-menu" class="video-menu video-track-menu" role="group" aria-label={$desktopCopy("Subtitles")}></div>
+            <div id="video-speed-menu" class="video-menu video-speed-menu" role="group" aria-label={$desktopCopy("Playback speed")}></div>
             <VideoSettingsPanel initialPreferences={preferences} onPreferencesChange={updatePreferences} />
         </div>
     </aside>
@@ -113,9 +114,9 @@
         onAutoNextChange={onUpdateVideoAutoNext}
     />
 
-    <div class="video-controls" aria-label="Video controls">
+    <div class="video-controls" aria-label={$desktopCopy("Video controls")}>
         <div class="video-timeline-row">
-            <div id="video-scrubber" class="video-scrubber" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0:00">
+            <div id="video-scrubber" class="video-scrubber" role="slider" tabindex="0" aria-label={$desktopCopy("Seek")} aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0:00">
                 <div class="video-scrubber-hit">
                     <span class="video-scrubber-track"></span>
                     <span id="video-scrubber-buffered" class="video-scrubber-buffered"></span>
@@ -131,33 +132,33 @@
 
         <div class="video-command-row">
             <div class="video-command-cluster video-primary-cluster">
-                <button id="video-skip-back" class="video-icon-btn video-skip-btn" type="button" aria-label="Back 10 seconds" title="Back 10 seconds">
+                <button id="video-skip-back" class="video-icon-btn video-skip-btn" type="button" aria-label={$desktopCopy("Back 10 seconds")} title={$desktopCopy("Back 10 seconds")}>
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5H6v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 8.3A7 7 0 1112 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><text x="12" y="15.2" text-anchor="middle" fill="currentColor" font-size="6.2" font-weight="800">10</text></svg>
                 </button>
-                <button id="video-play" class="video-icon-btn video-play-btn" type="button" data-state="paused" aria-label="Play" title="Play">
+                <button id="video-play" class="video-icon-btn video-play-btn" type="button" data-state="paused" aria-label={$desktopCopy("Play")} title={$desktopCopy("Play")}>
                     <PlayIcon class="video-play-symbol video-symbol-play" fill="currentColor" aria-hidden="true" />
                     <PauseIcon class="video-play-symbol video-symbol-pause" fill="currentColor" aria-hidden="true" />
                 </button>
-                <button id="video-skip-forward" class="video-icon-btn video-skip-btn" type="button" aria-label="Forward 10 seconds" title="Forward 10 seconds">
+                <button id="video-skip-forward" class="video-icon-btn video-skip-btn" type="button" aria-label={$desktopCopy("Forward 10 seconds")} title={$desktopCopy("Forward 10 seconds")}>
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 5h5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.4 8.3A7 7 0 1012 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><text x="12" y="15.2" text-anchor="middle" fill="currentColor" font-size="6.2" font-weight="800">10</text></svg>
                 </button>
                 <div class="video-volume-group">
-                    <button id="video-mute" class="video-icon-btn video-mute-btn" type="button" data-state="unmuted" aria-label="Mute">
+                    <button id="video-mute" class="video-icon-btn video-mute-btn" type="button" data-state="unmuted" aria-label={$desktopCopy("Mute")}>
                         <Volume2Icon class="video-mute-symbol video-symbol-volume" aria-hidden="true" />
                         <VolumeXIcon class="video-mute-symbol video-symbol-muted" aria-hidden="true" />
                     </button>
-                    <div id="video-volume-slider" class="video-volume-slider" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100%">
+                    <div id="video-volume-slider" class="video-volume-slider" role="slider" tabindex="0" aria-label={$desktopCopy("Volume")} aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100%">
                         <span class="video-volume-track"></span>
                         <span id="video-volume-fill" class="video-volume-fill"></span>
                         <span id="video-volume-thumb" class="video-volume-thumb"></span>
                     </div>
                 </div>
 
-                <button id="video-mobile-volume" class="video-icon-btn" type="button" aria-label="System volume" title="System volume" hidden>
+                <button id="video-mobile-volume" class="video-icon-btn" type="button" aria-label={$desktopCopy("System volume")} title={$desktopCopy("System volume")} hidden>
                     <Volume2Icon size={20} aria-hidden="true" />
                 </button>
 
-                <button id="video-time-display" class="video-time-display" type="button" aria-pressed="false" aria-label="Show estimated finish time" aria-describedby="video-time video-duration">
+                <button id="video-time-display" class="video-time-display" type="button" aria-pressed="false" aria-label={$desktopCopy("Show estimated finish time")} aria-describedby="video-time video-duration">
                     <span id="video-time" class="video-time">0:00</span><span class="video-time-separator"> / </span><span id="video-duration" class="video-time">--:--</span>
                     <span id="video-end-time" class="video-end-time" aria-hidden="true"><span></span></span>
                 </button>
@@ -165,14 +166,14 @@
 
             <div class="video-command-cluster video-secondary-cluster">
                 <div id="video-audio-wrap" class="video-menu-wrap video-track-wrap" hidden>
-                    <button id="video-audio-button" class="video-pill-button video-track-button" type="button" aria-label="Audio track" title="Audio track">
+                    <button id="video-audio-button" class="video-pill-button video-track-button" type="button" aria-label={$desktopCopy("Audio track")} title={$desktopCopy("Audio track")}>
                         <AudioLinesIcon size={15} aria-hidden="true" />
                         <span id="video-audio-label" class="video-track-value"></span>
                     </button>
                 </div>
 
                 <div id="video-subtitle-wrap" class="video-menu-wrap video-track-wrap" hidden>
-                    <button id="video-subtitle-button" class="video-pill-button video-track-button" type="button" data-state="off" aria-label="Subtitles" title="Subtitles">
+                    <button id="video-subtitle-button" class="video-pill-button video-track-button" type="button" data-state="off" aria-label={$desktopCopy("Subtitles")} title={$desktopCopy("Subtitles")}>
                         <CaptionsIcon size={15} aria-hidden="true" />
                         <span id="video-subtitle-label" class="video-track-value"></span>
                     </button>
@@ -182,21 +183,21 @@
                     <button id="video-speed-button" class="video-pill-button video-speed-button" type="button">1x</button>
                 </div>
 
-                <button id="video-aspect-button" class="video-pill-button video-aspect-button" type="button" aria-label="Video fit: Fit. Click to cycle" title="Video fit: Fit. Click to cycle">Fit</button>
+                <button id="video-aspect-button" class="video-pill-button video-aspect-button" type="button" aria-label={$desktopCopy("Video fit: Fit. Click to cycle")} title={$desktopCopy("Video fit: Fit. Click to cycle")}>{$desktopCopy("Fit")}</button>
 
-                <button id="video-picture-button" class="video-pill-button video-picture-button" type="button" aria-label="Playback settings" aria-expanded="false" aria-controls="video-settings-panel" title="Playback settings">
+                <button id="video-picture-button" class="video-pill-button video-picture-button" type="button" aria-label={$desktopCopy("Playback settings")} aria-expanded="false" aria-controls="video-settings-panel" title={$desktopCopy("Playback settings")}>
                     <SettingsIcon size={18} aria-hidden="true" />
                 </button>
 
-                <button id="video-playlist-button" class="video-pill-button video-playlist-button" type="button" aria-label="Open video playlist" aria-expanded="false" aria-controls="video-playlist-panel" title="Open video playlist" hidden>
+                <button id="video-playlist-button" class="video-pill-button video-playlist-button" type="button" aria-label={$desktopCopy("Open video playlist")} aria-expanded="false" aria-controls="video-playlist-panel" title={$desktopCopy("Open video playlist")} hidden>
                     <ListVideoIcon size={18} aria-hidden="true" />
                 </button>
 
-                <button id="video-rotate" class="video-icon-btn" type="button" aria-label="Rotate screen" title="Rotate screen" hidden>
+                <button id="video-rotate" class="video-icon-btn" type="button" aria-label={$desktopCopy("Rotate screen")} title={$desktopCopy("Rotate screen")} hidden>
                     <RotateCwIcon size={20} aria-hidden="true" />
                 </button>
 
-                <button id="video-fullscreen" class="video-icon-btn video-fullscreen-btn" type="button" data-state="windowed" aria-label="Enter fullscreen" title="Enter fullscreen">
+                <button id="video-fullscreen" class="video-icon-btn video-fullscreen-btn" type="button" data-state="windowed" aria-label={$desktopCopy("Enter fullscreen")} title={$desktopCopy("Enter fullscreen")}>
                     <MaximizeIcon class="video-fullscreen-symbol video-symbol-fullscreen-enter" aria-hidden="true" />
                     <MinimizeIcon class="video-fullscreen-symbol video-symbol-fullscreen-exit" aria-hidden="true" />
                 </button>

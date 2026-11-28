@@ -41,6 +41,7 @@ import { exitPhotos } from './gallery';
 import { dismissNotification, notify, notifyAppError } from './notifications';
 import { closeTrash } from './trash/controller';
 import { openSourceCopy } from './source-copies';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 let loadVersion = 0;
 let activationVersion = 0;
@@ -219,12 +220,12 @@ export function removeChannel(source: ChannelSource): void {
     publishSources();
     pending.toastId = notify({
         level: 'info',
-        title: `Removed ${source.title}`,
-        body: 'Nothing was removed from Telegram.',
+        title: desktopText('Removed {name}', { name: source.title }),
+        body: desktopText('Nothing was removed from Telegram.'),
         history: false,
         onRemoved: () => finishRemoval(key),
         action: {
-            label: 'Undo',
+            label: desktopText('Undo'),
             run: () => undoRemoval(key),
         },
     });
@@ -248,11 +249,11 @@ function finishRemoval(key: string): void {
     const work = disconnectChannelSource(source).then(() => {
         if (activation !== activationVersion) return;
         allConnectedSources = allConnectedSources.filter((current) => peerKey(current) !== key);
-        pushHistoryEvent({ level: 'info', title: `Removed ${source.title}`, body: 'Nothing was removed from Telegram.', ts: Date.now() });
+        pushHistoryEvent({ level: 'info', title: desktopText('Removed {name}', { name: source.title }), body: desktopText('Nothing was removed from Telegram.'), ts: Date.now() });
     }).catch((error: unknown) => {
         if (activation !== activationVersion) return;
         failed = true;
-        notifyAppError(error, { title: `Could not remove ${source.title}` });
+        notifyAppError(error, { title: desktopText('Could not remove {name}', { name: source.title }) });
     }).finally(() => {
         committingRemovals.delete(key);
         if (activation !== activationVersion) {

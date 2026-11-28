@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
     import { isAndroidPlatform } from '../../api';
     import type { ResumableDownload } from '../../api/resumable-downloads';
@@ -21,30 +22,30 @@
 
     const percent = $derived(job.totalBytes > 0 ? Math.min(100, job.verifiedBytes / job.totalBytes * 100) : 0);
     const stateLabel = $derived(
-        job.status === 'downloading' ? 'Downloading'
-        : job.status === 'waiting_network' ? 'Waiting for connection'
-        : job.status === 'waiting_unlock' ? 'Unlock to continue'
-        : job.status === 'needs_destination' ? 'Save location needed'
-        : job.status === 'source_changed' ? 'Source changed'
-        : job.status === 'verifying' ? 'Verifying'
-        : job.status === 'saving' ? 'Saving'
-        : job.status === 'completed' ? 'Ready to save'
-        : job.status === 'error' ? 'Needs attention'
-        : 'Paused',
+        job.status === 'downloading' ? $desktopCopy('Downloading')
+        : job.status === 'waiting_network' ? $desktopCopy('Waiting for connection')
+        : job.status === 'waiting_unlock' ? $desktopCopy('Unlock to continue')
+        : job.status === 'needs_destination' ? $desktopCopy('Save location needed')
+        : job.status === 'source_changed' ? $desktopCopy('Source changed')
+        : job.status === 'verifying' ? $desktopCopy('Verifying')
+        : job.status === 'saving' ? $desktopCopy('Saving')
+        : job.status === 'completed' ? $desktopCopy('Ready to save')
+        : job.status === 'error' ? $desktopCopy('Needs attention')
+        : $desktopCopy('Paused'),
     );
     const rate = $derived(job.status === 'downloading' && job.speed > 0 ? `${formatBytes(job.speed)}/s` : '');
     const eta = $derived(job.status === 'downloading' && job.speed > 0 && percent >= 5
         && (job.totalBytes - job.verifiedBytes) / job.speed <= 24 * 60 * 60
-        ? formatEta((job.totalBytes - job.verifiedBytes) / job.speed)
+        ? formatEta((job.totalBytes - job.verifiedBytes) / job.speed, $desktopCopy)
         : '');
-    const detail = $derived(`${stateLabel} · ${formatSizePair(job.verifiedBytes, job.totalBytes)} downloaded${rate ? ` · ${rate}` : ''}${eta ? ` · ${eta}` : ''}`);
+    const detail = $derived([stateLabel, $desktopCopy('{size} downloaded', { size: formatSizePair(job.verifiedBytes, job.totalBytes, $desktopCopy) }), rate, eta].filter(Boolean).join(' · '));
     const guidance = $derived(
-        job.status === 'waiting_network' ? 'TDrive will continue when your connection returns.'
-        : job.status === 'waiting_unlock' ? 'Unlock your vault, then resume this download.'
-        : job.status === 'needs_destination' ? 'Choose a new save location to keep these downloaded bytes.'
-        : job.status === 'source_changed' ? 'This file changed in Telegram. Start a fresh download from Files.'
+        job.status === 'waiting_network' ? $desktopCopy('TDrive will continue when your connection returns.')
+        : job.status === 'waiting_unlock' ? $desktopCopy('Unlock your vault, then resume this download.')
+        : job.status === 'needs_destination' ? $desktopCopy('Choose a new save location to keep these downloaded bytes.')
+        : job.status === 'source_changed' ? $desktopCopy('This file changed in Telegram. Start a fresh download from Files.')
         : job.status === 'completed' && isAndroidPlatform()
-            ? canSaveToDownloads() ? 'The file is verified. Save it to your Downloads folder.' : 'This build cannot save to Downloads. Update TDrive to finish saving.'
+            ? canSaveToDownloads() ? $desktopCopy('The file is verified. Save it to your Downloads folder.') : $desktopCopy('This build cannot save to Downloads. Update TDrive to finish saving.')
         : job.error,
     );
 
@@ -56,13 +57,13 @@
     }
 </script>
 
-<div class:mobile class="download-row" data-phase={job.status} role={mobile ? 'listitem' : undefined}>
+<div class:mobile class="download-row" data-phase={job.status} lang={$desktopLocale} role={mobile ? 'listitem' : undefined}>
     <span class="glyph" aria-hidden="true"><ArrowDownIcon size={mobile ? 15 : 14} strokeWidth={2} /></span>
-    <div class="name" title={job.name}>{#if onOpen}<button class="preview-title" type="button" onclick={onOpen}>{job.name || 'Download'}</button>{:else}{job.name || 'Download'}{/if}</div>
+    <div class="name" title={job.name}>{#if onOpen}<button class="preview-title" type="button" onclick={onOpen}>{job.name || $desktopCopy('Download')}</button>{:else}{job.name || $desktopCopy('Download')}{/if}</div>
     <div
         class="track"
         role="progressbar"
-        aria-label={`${job.name || 'Download'}, bytes received`}
+        aria-label={$desktopCopy('{name}, bytes received', { name: job.name || $desktopCopy('Download') })}
         aria-valuemin="0"
         aria-valuemax="100"
         aria-valuenow={Math.round(percent)}
@@ -71,22 +72,22 @@
     {#if guidance}<p class="note">{guidance}</p>{/if}
     <div class="actions">
         {#if job.status === 'downloading' || job.status === 'verifying' || job.status === 'saving'}
-            <button type="button" disabled={busy} aria-label={`Pause ${job.name}`} onclick={() => void act(() => pauseDownload(job.jobId))}>Pause</button>
+            <button type="button" disabled={busy} aria-label={$desktopCopy('Pause {name}', { name: job.name })} onclick={() => void act(() => pauseDownload(job.jobId))}>{$desktopCopy('Pause')}</button>
         {:else if job.status === 'completed'}
             {#if isAndroidPlatform() && canSaveToDownloads()}
-                <button type="button" disabled={busy} aria-label={`Save ${job.name} to Downloads`} onclick={() => void act(() => saveRecoveredDownload(job.jobId))}>Save to Downloads</button>
+                <button type="button" disabled={busy} aria-label={$desktopCopy('Save {name} to Downloads', { name: job.name })} onclick={() => void act(() => saveRecoveredDownload(job.jobId))}>{$desktopCopy('Save to Downloads')}</button>
             {/if}
         {:else if job.status !== 'source_changed'}
-            <button type="button" disabled={busy} aria-label={`${job.status === 'needs_destination' ? 'Choose location for' : 'Resume'} ${job.name}`} onclick={() => void act(() => resumePausedDownload(job.jobId))}>
-                {job.status === 'needs_destination' ? 'Choose location' : job.status === 'waiting_network' || job.status === 'error' ? 'Retry now' : 'Resume'}
+            <button type="button" disabled={busy} aria-label={job.status === 'needs_destination' ? $desktopCopy('Choose location for {name}', { name: job.name }) : $desktopCopy('Resume {name}', { name: job.name })} onclick={() => void act(() => resumePausedDownload(job.jobId))}>
+                {job.status === 'needs_destination' ? $desktopCopy('Choose location') : job.status === 'waiting_network' || job.status === 'error' ? $desktopCopy('Retry now') : $desktopCopy('Resume')}
             </button>
         {/if}
         {#if job.status !== 'downloading' && job.status !== 'verifying' && job.status !== 'saving' && job.status !== 'completed'}
             {#if confirmingDiscard}
-                <button type="button" disabled={busy} onclick={() => confirmingDiscard = false}>Keep</button>
-                <button type="button" class="danger" disabled={busy} aria-label={`Discard downloaded bytes for ${job.name}`} onclick={() => void act(() => discardDownload(job.jobId))}>Discard bytes</button>
+                <button type="button" disabled={busy} onclick={() => confirmingDiscard = false}>{$desktopCopy('Keep')}</button>
+                <button type="button" class="danger" disabled={busy} aria-label={$desktopCopy('Discard downloaded bytes for {name}', { name: job.name })} onclick={() => void act(() => discardDownload(job.jobId))}>{$desktopCopy('Discard bytes')}</button>
             {:else}
-                <button type="button" class="danger" disabled={busy} aria-label={`Discard ${job.name}`} onclick={() => confirmingDiscard = true}>Discard</button>
+                <button type="button" class="danger" disabled={busy} aria-label={$desktopCopy('Discard {name}', { name: job.name })} onclick={() => confirmingDiscard = true}>{$desktopCopy('Discard')}</button>
             {/if}
         {/if}
     </div>

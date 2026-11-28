@@ -1,5 +1,6 @@
 // New folder modal for TDrive frontend
 
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { invalidateFolderIndex, state } from '../../state';
 import { createFolder } from '../../api';
 import { notify } from '../notifications';
@@ -38,7 +39,7 @@ export async function submitFolder(name: string): Promise<void> {
     } catch (err) {
         notify({
             level: 'error',
-            title: 'Could not create folder',
+            title: desktopText('Could not create folder'),
             body: humanizeBackendError(err),
         });
     } finally {

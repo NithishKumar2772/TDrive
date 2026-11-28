@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
     import type { ResumableUpload } from '../../api/resumable-uploads';
     import { checkUploadStatus, chooseSourceAndResume, discardUpload, pauseUpload, resumeUpload } from '../../modules/resumable-uploads';
@@ -17,28 +18,28 @@
 
     const percent = $derived(job.size > 0 ? Math.min(100, job.confirmedBytes / job.size * 100) : 0);
     const stateLabel = $derived(
-        job.status === 'uploading' ? 'Uploading'
-        : job.status === 'paused' ? 'Paused'
-        : job.status === 'waiting_network' ? 'Waiting for connection'
-        : job.status === 'needs_source' ? 'Source file needed'
-        : job.status === 'uncertain' ? 'Checking needed'
-        : job.status === 'uncertain_manifest' ? 'Needs review'
-        : job.status === 'restart_required' ? 'Restart needed'
-        : job.status === 'canceling' ? 'Discarding…'
-        : 'Paused',
+        job.status === 'uploading' ? $desktopCopy('Uploading')
+        : job.status === 'paused' ? $desktopCopy('Paused')
+        : job.status === 'waiting_network' ? $desktopCopy('Waiting for connection')
+        : job.status === 'needs_source' ? $desktopCopy('Source file needed')
+        : job.status === 'uncertain' ? $desktopCopy('Checking needed')
+        : job.status === 'uncertain_manifest' ? $desktopCopy('Needs review')
+        : job.status === 'restart_required' ? $desktopCopy('Restart needed')
+        : job.status === 'canceling' ? $desktopCopy('Discarding…')
+        : $desktopCopy('Paused'),
     );
-    const detail = $derived(`${stateLabel} · ${formatSizePair(job.confirmedBytes, job.size)} confirmed`);
+    const detail = $derived([stateLabel, $desktopCopy('{size} confirmed', { size: formatSizePair(job.confirmedBytes, job.size, $desktopCopy) })].join(' · '));
     const guidance = $derived(
         job.status === 'needs_source'
-            ? 'The source moved or changed. Choose the original file to verify it.'
+            ? $desktopCopy('The source moved or changed. Choose the original file to verify it.')
             : job.status === 'waiting_network'
-                ? 'TDrive will retry when your connection returns. You can also retry now.'
+                ? $desktopCopy('TDrive will retry when your connection returns. You can also retry now.')
             : job.status === 'uncertain_manifest'
-                ? 'TDrive cannot yet confirm whether this file was published. Leave its parts in place.'
+                ? $desktopCopy('TDrive cannot yet confirm whether this file was published. Leave its parts in place.')
                 : job.status === 'uncertain'
-                    ? 'The last part needs checking before the upload can continue.'
+                    ? $desktopCopy('The last part needs checking before the upload can continue.')
                 : job.status === 'restart_required'
-                    ? 'The file changed during upload. Discard these parts, then start a new upload.'
+                    ? $desktopCopy('The file changed during upload. Discard these parts, then start a new upload.')
                 : '',
     );
 
@@ -50,16 +51,16 @@
     }
 </script>
 
-<div class="notif-row notif-row-transfer resumable-row" data-phase={job.status}>
+<div class="notif-row notif-row-transfer resumable-row" data-phase={job.status} lang={$desktopLocale}>
     <span class="notif-row-icon" data-kind="upload" aria-hidden="true">
         <ArrowUpIcon size={14} strokeWidth={2} aria-hidden="true" />
     </span>
     <div class="notif-row-body">
-        <div class="notif-row-title" title={job.name}>{#if onOpen}<button class="preview-title" type="button" onclick={onOpen}>{job.name || 'Large upload'}</button>{:else}{job.name || 'Large upload'}{/if}</div>
+        <div class="notif-row-title" title={job.name}>{#if onOpen}<button class="preview-title" type="button" onclick={onOpen}>{job.name || $desktopCopy('Large upload')}</button>{:else}{job.name || $desktopCopy('Large upload')}{/if}</div>
         <div
             class="notif-row-progress"
             role="progressbar"
-            aria-label={`${job.name || 'Large upload'}, confirmed in Telegram`}
+            aria-label={$desktopCopy('{name}, confirmed in Telegram', { name: job.name || $desktopCopy('Large upload') })}
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow={Math.round(percent)}
@@ -72,20 +73,20 @@
     {#if job.status !== 'canceling'}
         <div class="actions">
             {#if job.status === 'paused' || job.status === 'uncertain' || job.status === 'waiting_network'}
-                <button class="notif-row-copy" type="button" disabled={busy} aria-label={`${job.status === 'waiting_network' ? 'Retry' : 'Resume'} ${job.name}`} onclick={() => resumeUpload(job.jobId)}>{job.status === 'waiting_network' ? 'Retry now' : 'Resume'}</button>
+                <button class="notif-row-copy" type="button" disabled={busy} aria-label={job.status === 'waiting_network' ? $desktopCopy('Retry {name}', { name: job.name }) : $desktopCopy('Resume {name}', { name: job.name })} onclick={() => resumeUpload(job.jobId)}>{job.status === 'waiting_network' ? $desktopCopy('Retry now') : $desktopCopy('Resume')}</button>
             {:else if job.status === 'needs_source'}
-                <button class="notif-row-copy" type="button" disabled={busy} onclick={() => chooseSourceAndResume(job.jobId)}>Choose file</button>
+                <button class="notif-row-copy" type="button" disabled={busy} onclick={() => chooseSourceAndResume(job.jobId)}>{$desktopCopy('Choose file')}</button>
             {:else if job.status === 'uploading'}
-                <button class="notif-row-copy" type="button" disabled={busy} onclick={() => void act(() => pauseUpload(job.jobId))}>Pause</button>
+                <button class="notif-row-copy" type="button" disabled={busy} onclick={() => void act(() => pauseUpload(job.jobId))}>{$desktopCopy('Pause')}</button>
             {:else if job.status === 'uncertain_manifest'}
-                <button class="notif-row-copy" type="button" disabled={busy} onclick={() => void act(() => checkUploadStatus(job.jobId))}>{busy ? 'Checking…' : 'Check and retry'}</button>
+                <button class="notif-row-copy" type="button" disabled={busy} onclick={() => void act(() => checkUploadStatus(job.jobId))}>{busy ? $desktopCopy('Checking…') : $desktopCopy('Check and retry')}</button>
             {/if}
             {#if job.status !== 'uploading' && job.status !== 'uncertain_manifest'}
                 {#if confirmingDiscard}
-                    <button class="notif-row-copy" type="button" disabled={busy} onclick={() => confirmingDiscard = false}>Keep</button>
-                    <button class="notif-row-copy danger" type="button" disabled={busy} onclick={() => void act(() => discardUpload(job.jobId))}>Discard parts</button>
+                    <button class="notif-row-copy" type="button" disabled={busy} onclick={() => confirmingDiscard = false}>{$desktopCopy('Keep')}</button>
+                    <button class="notif-row-copy danger" type="button" disabled={busy} onclick={() => void act(() => discardUpload(job.jobId))}>{$desktopCopy('Discard parts')}</button>
                 {:else}
-                    <button class="notif-row-copy danger" type="button" disabled={busy} onclick={() => confirmingDiscard = true}>Discard</button>
+                    <button class="notif-row-copy danger" type="button" disabled={busy} onclick={() => confirmingDiscard = true}>{$desktopCopy('Discard')}</button>
                 {/if}
             {/if}
         </div>

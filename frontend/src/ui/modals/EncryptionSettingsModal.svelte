@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import EyeIcon from '@lucide/svelte/icons/eye';
     import EyeOffIcon from '@lucide/svelte/icons/eye-off';
     import ModalShell from './ModalShell.svelte';
@@ -121,28 +122,29 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="encryption-settings-modal"
     open={$view.open}
-    title="Encryption settings"
+    title={$desktopCopy('Encryption settings')}
     titleId="encryption-settings-title"
     cardClass="encryption-settings-card"
-    subtitle="Manage your encryption password and optional unlock on this device."
+    subtitle={$desktopCopy('Manage your encryption password and optional unlock on this device.')}
     initialFocus="#encryption-current-password"
     restoreFocus="#profile-trigger"
     onClose={cancel}
 >
-    <nav class="encryption-settings-panes" aria-label="Encryption settings sections">
-        <button type="button" class="secondary-btn" aria-pressed={activePane === 'password'} disabled={$view.busy} onclick={() => switchPane('password')}>Password</button>
-        <button id="encryption-device-unlock-pane" type="button" class="secondary-btn" aria-pressed={activePane === 'device'} disabled={$view.busy} onclick={() => switchPane('device')}>Device unlock</button>
+    <nav class="encryption-settings-panes" aria-label={$desktopCopy('Encryption settings sections')}>
+        <button type="button" class="secondary-btn" aria-pressed={activePane === 'password'} disabled={$view.busy} onclick={() => switchPane('password')}>{$desktopCopy('Password')}</button>
+        <button id="encryption-device-unlock-pane" type="button" class="secondary-btn" aria-pressed={activePane === 'device'} disabled={$view.busy} onclick={() => switchPane('device')}>{$desktopCopy('Device unlock')}</button>
     </nav>
     {#if activePane === 'password'}
     <div class="input-with-action">
         <input
             id="encryption-current-password"
             type={revealCurrent ? 'text' : 'password'}
-            aria-label="Current encryption password"
+            aria-label={$desktopCopy('Current encryption password')}
             aria-describedby={$view.error ? 'encryption-settings-error' : undefined}
-            placeholder="Current password"
+            placeholder={$desktopCopy('Current password')}
             autocomplete="current-password"
             bind:this={currentPasswordInput}
             bind:value={currentPassword}
@@ -153,8 +155,8 @@
             type="button"
             data-state={revealCurrent ? 'visible' : undefined}
             disabled={$view.busy}
-            aria-label="Hold to show current password"
-            title="Hold to show password"
+            aria-label={$desktopCopy('Hold to show current password')}
+            title={$desktopCopy('Hold to show password')}
             {...currentHold}
         >
             <EyeIcon class="input-action-icon icon-eye" size={18} strokeWidth={2} aria-hidden="true" />
@@ -165,9 +167,9 @@
         <input
             id="encryption-new-password"
             type={revealNew ? 'text' : 'password'}
-            aria-label="New encryption password"
+            aria-label={$desktopCopy('New encryption password')}
             aria-describedby={$view.error ? 'encryption-settings-error' : undefined}
-            placeholder="New password"
+            placeholder={$desktopCopy('New password')}
             autocomplete="new-password"
             bind:this={newPasswordInput}
             bind:value={newPassword}
@@ -178,8 +180,8 @@
             type="button"
             data-state={revealNew ? 'visible' : undefined}
             disabled={$view.busy}
-            aria-label="Hold to show new password"
-            title="Hold to show password"
+            aria-label={$desktopCopy('Hold to show new password')}
+            title={$desktopCopy('Hold to show password')}
             {...newHold}
         >
             <EyeIcon class="input-action-icon icon-eye" size={18} strokeWidth={2} aria-hidden="true" />
@@ -189,9 +191,9 @@
     <input
         id="encryption-new-password-confirm"
         type="password"
-        aria-label="Confirm new encryption password"
+        aria-label={$desktopCopy('Confirm new encryption password')}
         aria-describedby={$view.error ? 'encryption-settings-error' : undefined}
-        placeholder="Confirm new password"
+        placeholder={$desktopCopy('Confirm new password')}
         autocomplete="new-password"
         bind:this={confirmPasswordInput}
         bind:value={confirmPassword}
@@ -200,43 +202,42 @@
     <input
         id="encryption-settings-hint"
         type="text"
-        aria-label="Password hint"
+        aria-label={$desktopCopy('Password hint')}
         aria-describedby={$view.error ? 'encryption-settings-hint-help encryption-settings-error' : 'encryption-settings-hint-help'}
-        placeholder="Optional hint (do not put the password here)"
+        placeholder={$desktopCopy('Optional hint (do not put the password here)')}
         autocomplete="off"
         bind:value={hint}
         disabled={$view.busy}
     />
     <p id="encryption-settings-hint-help" class="field-help">
-        This hint is shown when TDrive asks for your encryption password. It is not encrypted, so don't put the
-        password itself here.
+        {$desktopCopy('This hint is shown when TDrive asks for your encryption password. It is not encrypted, so don\'t put the password itself here.')}
     </p>
     {:else if biometric}
         <section class="biometric-settings" aria-labelledby="encryption-biometric-title">
-            <h4 id="encryption-biometric-title">Unlock on this device</h4>
+            <h4 id="encryption-biometric-title">{$desktopCopy('Unlock on this device')}</h4>
             <p id="encryption-biometric-help" class="field-help biometric-help">
                 {#if biometric.enrolled}
-                    {biometricLabel(biometric.kind)} unlock is enabled for this device. Your password remains available for recovery and other devices.
+                    {$desktopCopy('{method} unlock is enabled for this device. Your password remains available for recovery and other devices.', { method: biometricLabel(biometric.kind, $desktopCopy) })}
                 {:else if !biometric.available}
-                    Your encryption password unlocks encrypted files on this device.
+                    {$desktopCopy('Your encryption password unlocks encrypted files on this device.')}
                 {:else}
-                    Enable {biometricLabel(biometric.kind)} to unlock encrypted files for the current session. Keep your encryption password for recovery and other devices.
+                    {$desktopCopy('Enable {method} to unlock encrypted files for the current session. Keep your encryption password for recovery and other devices.', { method: biometricLabel(biometric.kind, $desktopCopy) })}
                 {/if}
             </p>
             {#if !biometric.available}
-                <p class="field-help biometric-help">{biometricUnavailableMessage(biometric.reason)}</p>
+                <p class="field-help biometric-help">{biometricUnavailableMessage(biometric.reason, $desktopCopy)}</p>
             {/if}
             {#if biometric.enrolled}
                 <button id="encryption-biometric-disable" class="secondary-btn biometric-setting-action" type="button" disabled={$view.busy} onclick={disableBiometric}>
-                    Disable {biometricLabel(biometric.kind)}
+                    {$desktopCopy('Disable {method}', { method: biometricLabel(biometric.kind, $desktopCopy) })}
                 </button>
             {:else if biometric.available}
-                <label class="field-label" for="encryption-biometric-password">Encryption password</label>
+                <label class="field-label" for="encryption-biometric-password">{$desktopCopy('Encryption password')}</label>
                 <input
                     id="encryption-biometric-password"
                     type="password"
                     aria-describedby={$view.error ? 'encryption-biometric-help encryption-settings-error' : 'encryption-biometric-help'}
-                    placeholder="Current password to enable on this device"
+                    placeholder={$desktopCopy('Current password to enable on this device')}
                     autocomplete="current-password"
                     bind:this={biometricPasswordInput}
                     bind:value={biometricPassword}
@@ -244,12 +245,14 @@
                     onkeydown={(event) => { if (event.key === 'Enter') { event.preventDefault(); enableBiometric(); } }}
                 />
                 <button id="encryption-biometric-enable" class="secondary-btn biometric-setting-action" type="button" disabled={$view.busy} onclick={enableBiometric}>
-                    {biometricBusy ? 'Waiting for authentication…' : `Enable ${biometricLabel(biometric.kind)}`}
+                    {biometricBusy
+                        ? $desktopCopy('Waiting for authentication…')
+                        : $desktopCopy('Enable {method}', { method: biometricLabel(biometric.kind, $desktopCopy) })}
                 </button>
             {/if}
         </section>
     {:else}
-        <p class="field-help biometric-help" role="status">Checking biometric availability…</p>
+        <p class="field-help biometric-help" role="status">{$desktopCopy('Checking biometric availability…')}</p>
     {/if}
     {#if $view.error}
         <div id="encryption-settings-error" class="modal-error" role="alert">{$view.error}</div>
@@ -257,11 +260,11 @@
 
     {#snippet actions()}
         <button id="encryption-settings-cancel" class="secondary-btn" type="button" disabled={$view.busy && !biometricBusy} onclick={cancel}>
-            Cancel
+            {$desktopCopy('Cancel')}
         </button>
         {#if activePane === 'password'}
             <button id="encryption-settings-confirm" class="primary-btn" type="button" disabled={$view.busy} onclick={submit}>
-                Save
+                {$desktopCopy('Save')}
             </button>
         {/if}
     {/snippet}

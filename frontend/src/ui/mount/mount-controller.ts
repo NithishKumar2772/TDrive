@@ -10,6 +10,7 @@ import {
 import type { MountableDrive, MountPhase, MountStatusView } from '../../types';
 import { mountSelection } from './mount-selection-store';
 import { requireEncryptionPassword } from '../../modules/encryption';
+import { desktopText } from '../i18n/desktop-copy';
 
 export interface MountApi {
     mountDrive(): Promise<MountStatusView>;
@@ -176,7 +177,7 @@ export function createMountController(
         notify({
             id: 'mount-drive',
             level: 'info',
-            title: `Mounting ${get(state).label}...`,
+            title: desktopText('Mounting {name}...', { name: get(state).label }),
             spinner: true,
         });
         return trackMutation(async () => {
@@ -199,7 +200,7 @@ export function createMountController(
                         notify({
                             id: 'mount-drive',
                             level: 'info',
-                            title: 'Mount cancelled',
+                            title: desktopText('Mount cancelled'),
                             spinner: false,
                         });
                         return;
@@ -211,14 +212,14 @@ export function createMountController(
                 notify({
                     id: 'mount-drive',
                     level: 'success',
-                    title: `${result.label || 'Tdrive personal'} mounted`,
+                    title: desktopText('{name} mounted', { name: result.label || 'Tdrive personal' }),
                 });
             } catch (error) {
                 fail(error, 'The drive could not be mounted. Try again.', false);
                 notify({
                     id: 'mount-drive',
                     level: 'error',
-                    title: `Could not mount ${get(state).label}`,
+                    title: desktopText('Could not mount {name}', { name: get(state).label }),
                     body: get(state).error,
                 });
             }
@@ -254,8 +255,8 @@ export function createMountController(
             } catch (error) {
                 notify({
                     level: 'error',
-                    title: 'Could not load drives',
-                    body: safeMountError(error, 'The drive list could not be loaded.'),
+                    title: desktopText('Could not load drives'),
+                    body: safeMountError(error, desktopText('The drive list could not be loaded.')),
                 });
             }
         })();
@@ -275,7 +276,7 @@ export function createMountController(
         notify({
             id: 'mount-drive',
             level: 'info',
-            title: 'Ejecting Tdrive...',
+            title: desktopText('Ejecting Tdrive...'),
             spinner: true,
         });
         return trackMutation(async () => {
@@ -286,7 +287,7 @@ export function createMountController(
                 notify({
                     id: 'mount-drive',
                     level: 'success',
-                    title: 'Tdrive ejected',
+                    title: desktopText('Tdrive ejected'),
                 });
             } catch (error) {
                 try {
@@ -305,7 +306,7 @@ export function createMountController(
                 notify({
                     id: 'mount-drive',
                     level: 'error',
-                    title: 'Could not eject Tdrive',
+                    title: desktopText('Could not eject Tdrive'),
                     body: get(state).error,
                 });
             }

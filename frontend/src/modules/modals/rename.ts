@@ -2,6 +2,7 @@
 
 import { addTelegramFileToDrive, renameFile, renameFolder } from '../../api';
 import { invalidateFolderIndex } from '../../state';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { callWithPasswordRetry } from './encryption-password';
 import { humanizeBackendError } from '../errors';
 import { appActions } from '../app-actions';
@@ -35,11 +36,11 @@ export function openRenameModal(target: FileCommandItem): void {
 export async function submitRename(target: RenameModalTarget, rawName: string): Promise<void> {
     const nextName = (rawName || '').trim();
     if (!nextName) {
-        setRenameModalError("Name can't be empty.");
+        setRenameModalError(desktopText("Name can't be empty."));
         return;
     }
     if (/[\\/]/.test(nextName)) {
-        setRenameModalError("Name can't include / or \\.");
+        setRenameModalError(desktopText("Name can't include / or \\."));
         return;
     }
 

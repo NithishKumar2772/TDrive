@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { tick } from 'svelte';
     import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
     import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
@@ -33,10 +34,10 @@
     const anySaved = $derived(Boolean($dialog?.results.some(({ status }) => status === 'saved')));
     const sharedCopy = $derived(Boolean($dialog?.fromSharedDrive));
     const names = $derived({
-        saved: sharedCopy ? 'Copied' : 'Saved',
-        failed: sharedCopy ? 'Could not copy' : 'Could not save',
-        pending: 'Check in Activity',
-        canceled: 'Canceled',
+        saved: sharedCopy ? $desktopCopy('Copied') : $desktopCopy('Saved'),
+        failed: sharedCopy ? $desktopCopy('Could not copy') : $desktopCopy('Could not save'),
+        pending: $desktopCopy('Check in Activity'),
+        canceled: $desktopCopy('Canceled'),
     });
 
     $effect(() => {
@@ -84,9 +85,10 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="source-copy-modal"
     open={$dialog !== null}
-    title={sharedCopy ? 'Copy to My Drive' : 'Save to My Drive'}
+    title={sharedCopy ? $desktopCopy("Copy to My Drive") : $desktopCopy("Save to My Drive")}
     titleId="source-copy-title"
     cardClass="source-copy-card"
     actionsClass="modal-actions source-copy-actions"
@@ -99,7 +101,7 @@
         {#if $dialog}
             {#if stage === 'done'}
                 {#if $dialog.results.length}
-                    <ul class="copy-results" aria-label={sharedCopy ? 'Copy results' : 'Save results'}>
+                    <ul class="copy-results" aria-label={sharedCopy ? $desktopCopy("Copy results") : $desktopCopy("Save results")}>
                         {#each $dialog.results as result, index (index)}
                             <li>
                                 <strong>{result.name}</strong>
@@ -110,16 +112,16 @@
                 {/if}
             {:else}
                 {#if $dialog.items.length === 1}
-                    <label class="copy-section-label" for="source-copy-file-name">File name</label>
+                    <label class="copy-section-label" for="source-copy-file-name">{$desktopCopy("File name")}</label>
                     <input id="source-copy-file-name" type="text" value={$dialog.items[0].name} disabled={!editing} oninput={(event) => editSourceCopyName(event.currentTarget.value)} autocomplete="off" />
                 {:else}
                     <details class="copy-files">
                         <summary>
                             <ChevronRightIcon class="copy-disclosure-chevron" size={14} strokeWidth={2.25} aria-hidden="true" />
-                            <span>{$dialog.items.length} files selected</span>
+                            <span>{$desktopCopy('{count} files selected', { count: $dialog.items.length })}</span>
                         </summary>
                         <!-- svelte-ignore a11y_no_noninteractive_tabindex (The capped list needs keyboard scrolling.) -->
-                        <ul aria-label="Selected files" role="list" tabindex="0">
+                        <ul aria-label={$desktopCopy("Selected files")} role="list" tabindex="0">
                             {#each $dialog.items as item (item.source.msg_id)}
                                 {@const { base, ext } = splitNameAndExt(item.name)}
                                 {@const TypeIcon = fileTypeIcon(fileTypeFamily(ext))}
@@ -130,7 +132,7 @@
                                             <span class="copy-file-stem">{base}</span><span class="copy-file-ext">{item.name.slice(base.length)}</span>
                                         </div>
                                         {#if item.originalName && item.originalName !== item.name}
-                                            <p class="copy-file-original copy-muted" title={item.originalName}>Renamed from {item.originalName}</p>
+                                            <p class="copy-file-original copy-muted" title={item.originalName}>{$desktopCopy('Renamed from {name}', { name: item.originalName })}</p>
                                         {/if}
                                     </div>
                                 </li>
@@ -138,14 +140,14 @@
                         </ul>
                     </details>
                 {/if}
-                <div class="copy-section-label" id="source-copy-destination-label">{sharedCopy ? 'Copy to' : 'Save to'}</div>
+                <div class="copy-section-label" id="source-copy-destination-label">{sharedCopy ? $desktopCopy("Copy to") : $desktopCopy("Save to")}</div>
                 <div class="copy-destination" aria-labelledby="source-copy-destination-label" role="group">
                     <div class="move-modal-nav">
-                        <button type="button" class="move-back-btn" aria-label="Parent folder" disabled={!$dialog.path.length || stage !== 'ready'} onclick={() => browseSourceCopyCrumb(($dialog?.path.length ?? 0) - 2)}>
+                        <button type="button" class="move-back-btn" aria-label={$desktopCopy("Parent folder")} disabled={!$dialog.path.length || stage !== 'ready'} onclick={() => browseSourceCopyCrumb(($dialog?.path.length ?? 0) - 2)}>
                             <ChevronLeftIcon size={16} aria-hidden="true" />
                         </button>
-                        <div class="move-breadcrumb" aria-label="Destination folder">
-                            <button type="button" class="move-crumb" disabled={!$dialog.path.length || stage !== 'ready'} onclick={() => browseSourceCopyCrumb(-1)}>My Drive</button>
+                        <div class="move-breadcrumb" aria-label={$desktopCopy("Destination folder")}>
+                            <button type="button" class="move-crumb" disabled={!$dialog.path.length || stage !== 'ready'} onclick={() => browseSourceCopyCrumb(-1)}>{$desktopCopy("My Drive")}</button>
                             {#each $dialog.path as folder, index (folder.id)}
                                 <span class="move-crumb-sep" aria-hidden="true">/</span>
                                 <button type="button" class="move-crumb" disabled={index === $dialog.path.length - 1 || stage !== 'ready'} onclick={() => browseSourceCopyCrumb(index)}>{folder.name}</button>
@@ -153,28 +155,28 @@
                         </div>
                         {#if !makingFolder}
                             <button type="button" class="copy-new-folder" bind:this={newFolderButton} disabled={!editing} onclick={() => void startFolder()}>
-                                <FolderPlusIcon size={15} aria-hidden="true" /> New folder
+                                <FolderPlusIcon size={15} aria-hidden="true" /> {$desktopCopy("New folder")}
                             </button>
                         {/if}
                     </div>
                     {#if makingFolder}
                         <div class="copy-folder-editor">
                             <FolderIcon size={16} aria-hidden="true" />
-                            <input id="source-copy-folder-name" type="text" aria-label="Folder name" placeholder="Folder name" autocomplete="off" bind:this={folderNameInput} bind:value={folderName} disabled={!editing} onkeydown={(event) => {
+                            <input id="source-copy-folder-name" type="text" aria-label={$desktopCopy("Folder name")} placeholder={$desktopCopy("Folder name")} autocomplete="off" bind:this={folderNameInput} bind:value={folderName} disabled={!editing} onkeydown={(event) => {
                                 if (event.key === 'Enter' && editing && folderName.trim()) void makeFolder();
                                 if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); void cancelFolder(); }
                             }} />
-                            <button type="button" class="secondary-btn" disabled={!editing} onclick={() => void cancelFolder()}>Cancel</button>
-                            <button type="button" class="secondary-btn" disabled={!editing || !folderName.trim()} onclick={() => void makeFolder()}>Create folder</button>
+                            <button type="button" class="secondary-btn" disabled={!editing} onclick={() => void cancelFolder()}>{$desktopCopy("Cancel")}</button>
+                            <button type="button" class="secondary-btn" disabled={!editing || !folderName.trim()} onclick={() => void makeFolder()}>{$desktopCopy("Create folder")}</button>
                         </div>
                     {/if}
-                    <div class="move-list" aria-label="Folders in My Drive" aria-busy={stage === 'loading'}>
+                    <div class="move-list" aria-label={$desktopCopy("Folders in My Drive")} aria-busy={stage === 'loading'}>
                         {#if stage === 'loading'}
-                            <div class="move-list-empty" role="status">Loading folders…</div>
+                            <div class="move-list-empty" role="status">{$desktopCopy("Loading folders…")}</div>
                         {:else if $dialog.browseFailed}
-                            <div class="move-list-empty"><button class="link-button" type="button" onclick={reloadSourceCopyFolder}>Try again</button></div>
+                            <div class="move-list-empty"><button class="link-button" type="button" onclick={reloadSourceCopyFolder}>{$desktopCopy("Try again")}</button></div>
                         {:else if !$dialog.folders.length}
-                            <div class="move-list-empty">No folders here. Save here, or make a new one.</div>
+                            <div class="move-list-empty">{$desktopCopy("No folders here. Save here, or make a new one.")}</div>
                         {:else}
                             {#each $dialog.folders as folder (folder.id)}
                                 <button type="button" class="move-item" disabled={!editing} onclick={() => openSourceCopyFolder(folder)}>
@@ -187,9 +189,9 @@
                     </div>
                 </div>
                 {#if editing}
-                    <p id="source-copy-name-hint" class="copy-muted copy-name-hint">TDrive adds a number to names that are already in use in this folder.</p>
+                    <p id="source-copy-name-hint" class="copy-muted copy-name-hint">{$desktopCopy("TDrive adds a number to names that are already in use in this folder.")}</p>
                 {/if}
-                {#if stage === 'saving'}<p role="status">{$dialog.stopping ? 'Stopping after the current work settles…' : sharedCopy ? 'Copying files…' : 'Saving files…'}</p>{/if}
+                {#if stage === 'saving'}<p role="status">{$dialog.stopping ? $desktopCopy("Stopping after the current work settles…") : sharedCopy ? $desktopCopy("Copying files…") : $desktopCopy("Saving files…")}</p>{/if}
             {/if}
             {#if $dialog.error}<p class="modal-error" role="alert">{$dialog.error}</p>{/if}
         {/if}
@@ -199,25 +201,27 @@
         {#if $dialog && stage !== 'done'}
             <div class="copy-notice">
                 <ShieldOffIcon size={15} aria-hidden="true" />
-                <p class="copy-muted">Copies are saved without vault encryption.{sharedCopy ? '' : ' The original files stay in Telegram.'}</p>
+                <p class="copy-muted">{sharedCopy
+                    ? $desktopCopy('Copies are saved without vault encryption.')
+                    : $desktopCopy('Copies are saved without vault encryption. The original files stay in Telegram.')}</p>
             </div>
         {/if}
         <div class="copy-action-buttons">
             {#if stage === 'saving'}
-                <button class="secondary-btn" type="button" disabled={$dialog?.stopping} onclick={() => void stopSourceCopy()}>{sharedCopy ? 'Stop copying' : 'Stop saving'}</button>
+                <button class="secondary-btn" type="button" disabled={$dialog?.stopping} onclick={() => void stopSourceCopy()}>{sharedCopy ? $desktopCopy("Stop copying") : $desktopCopy("Stop saving")}</button>
             {:else}
-                <button id="source-copy-dismiss" class="secondary-btn" type="button" disabled={stage === 'creating' || $dialog?.openingFolder} onclick={closeSourceCopy}>{stage === 'done' ? 'Done' : 'Cancel'}</button>
+                <button id="source-copy-dismiss" class="secondary-btn" type="button" disabled={stage === 'creating' || $dialog?.openingFolder} onclick={closeSourceCopy}>{stage === 'done' ? $desktopCopy("Done") : $desktopCopy("Cancel")}</button>
                 {#if stage === 'done'}
                     {#if anySaved}
                         <button class="primary-btn" type="button" disabled={$dialog?.openingFolder} onclick={() => void openSavedSourceCopyFolder()}>
-                            {$dialog?.openingFolder ? 'Opening folder…' : 'Open folder'}
+                            {$dialog?.openingFolder ? $desktopCopy("Opening folder…") : $desktopCopy("Open folder")}
                         </button>
                     {/if}
                     {#if !$dialog?.results.length || $dialog.results.some(({ status }) => status === 'pending')}
-                        <button class="secondary-btn" type="button" disabled={$dialog?.openingFolder} onclick={() => void viewActivity()}>View Activity</button>
+                        <button class="secondary-btn" type="button" disabled={$dialog?.openingFolder} onclick={() => void viewActivity()}>{$desktopCopy("View Activity")}</button>
                     {/if}
                 {:else}
-                    <button class="primary-btn" type="button" disabled={!editing || makingFolder || $dialog?.items.some(({ name }) => !name.trim())} aria-describedby={editing ? 'source-copy-name-hint' : undefined} onclick={() => void confirmSourceCopy()}>{sharedCopy ? 'Copy here' : 'Save here'}</button>
+                    <button class="primary-btn" type="button" disabled={!editing || makingFolder || $dialog?.items.some(({ name }) => !name.trim())} aria-describedby={editing ? 'source-copy-name-hint' : undefined} onclick={() => void confirmSourceCopy()}>{sharedCopy ? $desktopCopy("Copy here") : $desktopCopy("Save here")}</button>
                 {/if}
             {/if}
         </div>

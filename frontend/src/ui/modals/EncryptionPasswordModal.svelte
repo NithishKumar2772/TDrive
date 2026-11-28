@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ModalShell from './ModalShell.svelte';
     import { encryptionPasswordModal } from './encryption-password-modal-store';
     import FingerprintIcon from '@lucide/svelte/icons/fingerprint';
@@ -63,9 +64,10 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="encryption-password-modal"
     open={$view.open}
-    title="Unlock encrypted files"
+    title={$desktopCopy('Unlock encrypted files')}
     titleId="encryption-password-title"
     cardClass="encryption-unlock-card"
     initialFocus="#encryption-password-input"
@@ -75,9 +77,9 @@
     <input
         id="encryption-password-input"
         type="password"
-        aria-label="Encryption password"
+        aria-label={$desktopCopy('Encryption password')}
         aria-describedby={hint && $view.error ? 'encryption-password-hint encryption-password-error' : hint ? 'encryption-password-hint' : $view.error ? 'encryption-password-error' : undefined}
-        placeholder="Password"
+        placeholder={$desktopCopy('Password')}
         autocomplete="current-password"
         bind:this={passwordInput}
         bind:value={password}
@@ -89,23 +91,25 @@
     {/if}
     {#if hint}
         <p id="encryption-password-hint" class="modal-subtitle">
-            Hint: <span id="encryption-password-hint-text">{hint}</span>
+            {$desktopCopy('Hint:')} <span id="encryption-password-hint-text" dir="auto">{hint}</span>
         </p>
     {/if}
     {#if biometric?.available && biometric.enrolled}
         <button id="encryption-password-biometric" class="secondary-btn biometric-unlock-btn" type="button" disabled={$view.busy} onclick={unlockWithBiometric}>
             <FingerprintIcon size={18} aria-hidden="true" />
-            {biometricBusy ? 'Waiting for authentication…' : `Use ${biometricLabel(biometric.kind)}`}
+            {biometricBusy
+                ? $desktopCopy('Waiting for authentication…')
+                : $desktopCopy('Use {method}', { method: biometricLabel(biometric.kind, $desktopCopy) })}
         </button>
     {/if}
-    <p class="field-help unlock-session-help">Files stay unlocked until you lock, sign out or close the app.</p>
+    <p class="field-help unlock-session-help">{$desktopCopy('Files stay unlocked until you lock, sign out or close the app.')}</p>
 
     {#snippet actions()}
         <button id="encryption-password-cancel" class="secondary-btn" type="button" disabled={$view.busy && !biometricBusy} onclick={cancel}>
-            Cancel
+            {$desktopCopy('Cancel')}
         </button>
         <button id="encryption-password-confirm" class="primary-btn" type="button" disabled={$view.busy} onclick={submit}>
-            Unlock with password
+            {$desktopCopy('Unlock with password')}
         </button>
     {/snippet}
 </ModalShell>

@@ -9,6 +9,7 @@
     import XIcon from '@lucide/svelte/icons/x';
     import ModalShell from '../modals/ModalShell.svelte';
     import { installModalA11y } from '../modals/modal-a11y';
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { toAppError } from '../../modules/errors';
     import type { ChannelSource } from './channel-model';
     import { createChannelTopicPager, type ChannelTopic, type ChannelTopicFetcher, type ChannelTopicView } from './channel-topics';
@@ -29,7 +30,7 @@
     let trigger = $state<HTMLButtonElement | null>(null);
     let panel = $state<HTMLDivElement | null>(null);
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const label = $derived(selected?.title ?? 'All topics');
+    const label = $derived(selected?.title ?? $desktopCopy('All topics'));
     const error = $derived(view.status === 'error' ? toAppError(view.error, { source: 'backend' }).message : '');
 
     function close(): void {
@@ -97,11 +98,11 @@
 {#snippet contents()}
     <label class="search-field topic-search">
         <SearchIcon size={16} strokeWidth={2} aria-hidden="true" />
-        <input type="search" aria-label="Search topics" placeholder="Search topics…" maxlength="120" autocomplete="off" spellcheck="false" bind:value={query} oninput={search} />
+        <input type="search" aria-label={$desktopCopy('Search topics')} placeholder={$desktopCopy('Search topics…')} maxlength="120" autocomplete="off" spellcheck="false" bind:value={query} oninput={search} />
     </label>
-    <div class="topic-options" role="group" aria-label="Topics">
+    <div class="topic-options" role="group" aria-label={$desktopCopy('Topics')}>
         <button type="button" class="topic-option" aria-pressed={!selected} onclick={() => choose()}>
-            <LayersIcon size={18} strokeWidth={1.75} aria-hidden="true" /><span>All topics</span>
+            <LayersIcon size={18} strokeWidth={1.75} aria-hidden="true" /><span>{$desktopCopy('All topics')}</span>
             {#if !selected}<CheckIcon class="topic-check" size={16} strokeWidth={2.5} aria-hidden="true" />{/if}
         </button>
         {#each view.topics as topic (topic.id)}
@@ -113,28 +114,28 @@
             </button>
         {/each}
         {#if view.status === 'loading' || view.status === 'idle'}
-            <p class="topic-note" role="status">Loading topics…</p>
+            <p class="topic-note" role="status">{$desktopCopy('Loading topics…')}</p>
         {:else if error}
-            <p class="topic-note" role="alert">{error}</p>
-            <button class="topic-retry link-button" type="button" onclick={() => void load(view.topics.length > 0)}>Try again</button>
+            <p class="topic-note" role="alert" lang="en">{error}</p>
+            <button class="topic-retry link-button" type="button" onclick={() => void load(view.topics.length > 0)}>{$desktopCopy('Try again')}</button>
         {:else if view.topics.length === 0}
-            <p class="topic-note" role="status">{query.trim() ? 'No topics match your search.' : 'No topics available.'}</p>
+            <p class="topic-note" role="status">{query.trim() ? $desktopCopy('No topics match your search.') : $desktopCopy('No topics available.')}</p>
         {/if}
         {#if view.status === 'ready' && view.hasMore}
-            <button class="topic-retry link-button" type="button" onclick={() => void load(true)}>Load more topics</button>
+            <button class="topic-retry link-button" type="button" onclick={() => void load(true)}>{$desktopCopy('Load more topics')}</button>
         {:else if view.capped}
-            <p class="topic-note">Search to find more topics.</p>
+            <p class="topic-note">{$desktopCopy('Search to find more topics.')}</p>
         {/if}
     </div>
 {/snippet}
 
-<div class="topic-picker" class:is-mobile={mobile}>
-    <button bind:this={trigger} class="topic-trigger" type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={`Choose topic: ${label}`} onclick={(event) => { event.stopPropagation(); open = !open; }}>
+<div class="topic-picker" class:is-mobile={mobile} lang={$desktopLocale}>
+    <button bind:this={trigger} class="topic-trigger" type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={$desktopCopy('Choose topic: {name}', { name: label })} onclick={(event) => { event.stopPropagation(); open = !open; }}>
         {#if selected}<HashIcon size={15} strokeWidth={2} aria-hidden="true" />{:else}<LayersIcon size={15} strokeWidth={2} aria-hidden="true" />{/if}
         <span>{label}</span><ChevronDownIcon size={14} strokeWidth={2} aria-hidden="true" />
     </button>
     {#if !mobile && open}
-        <div bind:this={panel} class="topic-popover" role="dialog" aria-label="Choose a topic" tabindex="-1">
+        <div bind:this={panel} class="topic-popover" role="dialog" aria-label={$desktopCopy('Choose a topic')} tabindex="-1">
             {@render contents()}
         </div>
     {/if}

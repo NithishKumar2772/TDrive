@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ModalShell from './ModalShell.svelte';
     import { joinDriveModal } from './join-drive-modal-store';
 
@@ -39,20 +40,22 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="join-drive-modal"
     open={$view.open}
-    title="Join shared drive"
+    title={$desktopCopy("Join shared drive")}
     titleId="join-drive-title"
-    subtitle="Paste the t.me invite link you received from a friend. If the drive has lots of history, joining may take a few seconds."
+    subtitle={$desktopCopy("Paste the t.me invite link you received from a friend. If the drive has lots of history, joining may take a few seconds.")}
     initialFocus="#join-drive-link"
     restoreFocus="#drives-nav"
     onClose={close}
 >
-    <label class="field-label" for="join-drive-link">Invite link</label>
+    <label class="field-label" for="join-drive-link">{$desktopCopy("Invite link")}</label>
     <input
         id="join-drive-link"
         type="text"
         placeholder="https://t.me/+..."
+        dir="ltr"
         autocomplete="off"
         bind:value={link}
         disabled={$view.busy}
@@ -61,7 +64,7 @@
 
     {#snippet actions()}
         <button id="join-drive-cancel" class="secondary-btn" type="button" disabled={$view.busy} onclick={close}>
-            Cancel
+            {$desktopCopy("Cancel")}
         </button>
         <button
             id="join-drive-go"
@@ -70,7 +73,7 @@
             disabled={$view.busy || !link.trim()}
             onclick={submit}
         >
-            Join
+            {$desktopCopy("Join")}
         </button>
     {/snippet}
 </ModalShell>

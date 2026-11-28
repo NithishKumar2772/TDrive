@@ -4,6 +4,7 @@
     import { createSheetDragController, FLICK_SPEED } from './sheet-gesture';
     import { isMobilePlatform } from '../../api';
     import { prefersReducedMotion } from '../mobile/motion';
+    import { isLocale, localeDirection } from '../i18n/messages';
 
     interface Props {
         hostId: string;
@@ -58,6 +59,7 @@
 
     // Resolve the default once: phones get sheets, everything else dialogs.
     const asSheet = $derived((presentation ?? (isMobilePlatform() ? 'sheet' : 'dialog')) === 'sheet');
+    const textDirection = $derived(dir ?? (isLocale(lang) ? localeDirection(lang) : undefined));
 
     let host = $state<HTMLElement | null>(null);
     let card = $state<HTMLElement | null>(null);
@@ -357,7 +359,7 @@
         class:is-dragging={dragging}
         role="dialog"
         {lang}
-        {dir}
+        dir={textDirection}
         aria-modal="true"
         aria-labelledby={titleId}
     >

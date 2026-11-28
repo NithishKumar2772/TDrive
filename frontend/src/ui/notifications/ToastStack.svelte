@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { cubicOut } from 'svelte/easing';
     import { fly } from 'svelte/transition';
     import CheckIcon from '@lucide/svelte/icons/check';
@@ -73,6 +74,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
     class="toast-stack-inner"
+    lang={$desktopLocale}
     onpointerenter={(event) => { if (hovering(event)) { pointerInside = true; syncPause(); } }}
     onpointerleave={(event) => { if (hovering(event)) { pointerInside = false; syncPause(); } }}
     onfocusin={() => { focusInside = true; syncPause(); }}
@@ -123,7 +125,7 @@
             <button
                 class="toast-close toast-interactive-control"
                 type="button"
-                aria-label="Dismiss"
+                aria-label={$desktopCopy('Dismiss')}
                 data-toast-interactive
                 onclick={(event) => {
                     event.stopPropagation();

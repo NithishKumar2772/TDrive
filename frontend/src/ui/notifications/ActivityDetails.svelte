@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { readable } from 'svelte/store';
     import { resumableUploads } from '../../modules/resumable-upload-store';
     import { removeQueuedUpload } from '../../modules/upload-queue';
@@ -32,7 +33,10 @@
     type FileFilter = 'all' | 'active' | 'queued' | 'failed' | 'done' | 'canceled';
     let fileFilter = $state<FileFilter>('all');
     const PAGE_SIZE = 50;
-    const FILE_STATUS = { done: 'Completed', active: 'Uploading', queued: 'Waiting', failed: 'Failed', canceled: 'Canceled' } as const;
+    const FILE_STATUS = $derived({
+        done: $desktopCopy('Completed'), active: $desktopCopy('Uploading'), queued: $desktopCopy('Waiting'),
+        failed: $desktopCopy('Failed'), canceled: $desktopCopy('Canceled'),
+    });
     const batch = $derived(entry.kind === 'batch' ? entry.batch : null);
     const transfer = $derived(entry.kind === 'transfer' || entry.kind === 'batch' ? entry.transfer : undefined);
     const activeFiles = $derived(new Map((transfer?.items ?? []).map((item) => [item.key, item])));
@@ -73,7 +77,10 @@
     const isSaving = (file: UploadActivityFile) => file.status === 'active' && (file.progress ?? 0) >= 100;
     // One chip per state the batch actually has, so the list can be narrowed to
     // what is moving, waiting or went wrong.
-    const CHIPS: ReadonlyArray<[FileFilter, string]> = [['all', 'All'], ['active', 'Uploading'], ['queued', 'Waiting'], ['failed', 'Failed'], ['done', 'Done'], ['canceled', 'Canceled']];
+    const CHIPS = $derived<ReadonlyArray<[FileFilter, string]>>([
+        ['all', $desktopCopy('All')], ['active', $desktopCopy('Uploading')], ['queued', $desktopCopy('Waiting')],
+        ['failed', $desktopCopy('Failed')], ['done', $desktopCopy('Done')], ['canceled', $desktopCopy('Canceled')],
+    ]);
     // An import names its files as it reaches them; the rest are still to come.
     const unlisted = $derived(batch && (batch.status === 'active' || batch.status === 'queued') ? Math.max(0, batch.fileCount - batch.files.length) : 0);
     // "All" carries no count: the header already says how many files there are,
@@ -91,27 +98,28 @@
         return path ? path.split(' / ').pop() || batch.driveTitle : batch.driveTitle;
     });
     const headline = $derived(!batch ? entry.name
-        : batch.status === 'queued' ? `Waiting to upload to ${folderName}`
-        : batch.status === 'active' ? ($uploadsPaused ? `Upload to ${folderName} paused` : `Uploading to ${folderName}`)
-        : batch.status === 'done' ? `Uploaded to ${folderName}`
-        : batch.status === 'failed' ? `Upload to ${folderName} ${batch.restored ? "didn't finish" : 'needs attention'}`
-        : `Upload to ${folderName} canceled`);
+        : batch.status === 'queued' ? $desktopCopy('Waiting to upload to {folder}', { folder: folderName })
+        : batch.status === 'active' ? ($uploadsPaused ? $desktopCopy('Upload to {folder} paused', { folder: folderName }) : $desktopCopy('Uploading to {folder}', { folder: folderName }))
+        : batch.status === 'done' ? $desktopCopy('Uploaded to {folder}', { folder: folderName })
+        : batch.status === 'failed' ? (batch.restored ? $desktopCopy("Upload to {folder} didn't finish", { folder: folderName })
+            : $desktopCopy('Upload to {folder} needs attention', { folder: folderName }))
+        : $desktopCopy('Upload to {folder} canceled', { folder: folderName }));
     // The full path only when the title's folder does not already say it.
     const fullPath = $derived(batch ? `${batch.driveTitle}${destinationPath ? ` / ${destinationPath}` : ''}` : '');
     const meta = $derived(batch ? [
-        fileCountLabel(batch.fileCount),
+        fileCountLabel(batch.fileCount, $desktopCopy),
         fullPath === folderName ? '' : fullPath,
-        batch.encrypt ? 'Encrypted' : 'Not encrypted',
+        batch.encrypt ? $desktopCopy('Encrypted') : $desktopCopy('Not encrypted'),
     ].filter(Boolean).join(' · ') : '');
     const percent = $derived(transfer ? transferPercent(transfer) : null);
     const figures = $derived.by(() => {
         if (!batch || !transfer) return { left: '', right: '' };
         const done = batch.files.filter((file) => file.status === 'done').length;
-        const bytes = transfer.total > 0 ? formatSizePair(transferredBytes(transfer), transfer.total) : transfer.bytes > 0 ? `${formatBytes(transfer.bytes)} so far` : '';
+        const bytes = transfer.total > 0 ? formatSizePair(transferredBytes(transfer), transfer.total, $desktopCopy) : transfer.bytes > 0 ? $desktopCopy('{size} so far', { size: formatBytes(transfer.bytes, $desktopLocale) }) : '';
         const eta = etaSeconds(transfer, $clock);
         return {
-            left: [`${done.toLocaleString()} of ${fileCountLabel(batch.fileCount)}`, bytes].filter(Boolean).join(' · '),
-            right: $uploadsPaused ? '' : [eta !== null ? formatEta(eta) : '', transfer.speed > 0 ? `${formatBytes(transfer.speed)}/s` : ''].filter(Boolean).join(' · '),
+            left: [$desktopCopy('{done} of {files}', { done: done.toLocaleString($desktopLocale), files: fileCountLabel(batch.fileCount, $desktopCopy) }), bytes].filter(Boolean).join(' · '),
+            right: $uploadsPaused ? '' : [eta !== null ? formatEta(eta, $desktopCopy) : '', transfer.speed > 0 ? `${formatBytes(transfer.speed)}/s` : ''].filter(Boolean).join(' · '),
         };
     });
     const startedAt = $derived(batch?.startedAt || transfer?.startedAt || 0);
@@ -121,16 +129,17 @@
     const running = $derived(batch?.status === 'active');
     const status = $derived.by(() => {
         if (!batch) return entry.summary;
-        if (running) return $uploadsPaused ? 'Files already sending will finish. The rest wait until you resume.' : '';
+        if (running) return $uploadsPaused ? $desktopCopy('Files already sending will finish. The rest wait until you resume.') : '';
         // The title already says done or canceled; a failure says how much.
         if (batch.status === 'done' || batch.status === 'canceled') return '';
         if (batch.status === 'failed' && !linkedJobs.length) {
             const failed = batchFailedFileCount(batch);
-            return failed ? `${failed} of ${fileCountLabel(batch.fileCount)} didn't upload` : batchLabel(batch, $resumableUploads, activeDriveId);
+            return failed ? $desktopCopy("{count} of {files} didn't upload", { count: failed, files: fileCountLabel(batch.fileCount, $desktopCopy) }) : batchLabel(batch, $resumableUploads, activeDriveId, false, $desktopCopy);
         }
-        if (batch.status !== 'queued' || paused) return batchLabel(batch, $resumableUploads, activeDriveId);
-        if (queuedAhead > 0) return `Queued · ${queuedAhead} ${queuedAhead === 1 ? 'upload' : 'uploads'} ahead`;
-        return uploadRunning ? 'Queued · Starts after the current upload' : 'Queued · Starting soon';
+        if (batch.status !== 'queued' || paused) return batchLabel(batch, $resumableUploads, activeDriveId, false, $desktopCopy);
+        if (queuedAhead > 0) return (queuedAhead === 1 ? $desktopCopy('Queued · {count} upload ahead', { count: queuedAhead })
+            : $desktopCopy('Queued · {count} uploads ahead', { count: queuedAhead }));
+        return uploadRunning ? $desktopCopy('Queued · Starts after the current upload') : $desktopCopy('Queued · Starting soon');
     });
     const retry = $derived(entry.kind === 'transfer' ? downloadRetryFor(entry.transfer) : undefined);
 
@@ -141,14 +150,14 @@
         if (file.status === 'active') {
             const progress = filePercent(file);
             // Telegram has it; only the local index entry is still being written.
-            if (progress !== undefined && progress >= 100) return 'Saving…';
-            return progress ? `${Math.round(progress)}%` : 'Uploading';
+            if (progress !== undefined && progress >= 100) return $desktopCopy('Saving…');
+            return progress ? `${Math.round(progress)}%` : $desktopCopy('Uploading');
         }
-        if (file.status === 'queued') return running && $uploadsPaused ? 'Paused' : 'Waiting';
+        if (file.status === 'queued') return running && $uploadsPaused ? $desktopCopy('Paused') : $desktopCopy('Waiting');
         return FILE_STATUS[file.status];
     }
     function canCancel(file: UploadActivityFile): boolean {
-        return running && (file.status === 'queued' || (file.status === 'active' && fileStatus(file) !== 'Saving…'));
+        return running && (file.status === 'queued' || (file.status === 'active' && !((filePercent(file) ?? 0) >= 100)));
     }
     function chooseFilter(filter: FileFilter): void {
         fileFilter = filter;
@@ -159,19 +168,19 @@
         collapsed = collapsed.includes(folder) ? collapsed.filter((entry) => entry !== folder) : [...collapsed, folder];
     }
     function folderCounts(row: Extract<FileRow, { kind: 'folder' }>): string {
-        return [fileCountLabel(row.total), row.done ? `${row.done} done` : '', row.saving ? `${row.saving} saving` : '', row.active ? `${row.active} uploading` : '']
+        return [fileCountLabel(row.total, $desktopCopy), row.done ? $desktopCopy('{count} done', { count: row.done }) : '', row.saving ? $desktopCopy('{count} saving', { count: row.saving }) : '', row.active ? $desktopCopy('{count} uploading', { count: row.active }) : '']
             .filter(Boolean).join(' · ');
     }
 
     function duration(seconds: number): string {
-        if (seconds < 60) return `${seconds}s`;
+        if (seconds < 60) return $desktopCopy('{seconds}s', { seconds });
         const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes} min ${seconds % 60}s`;
-        return `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
+        if (minutes < 60) return $desktopCopy('{minutes} min {seconds}s', { minutes, seconds: seconds % 60 });
+        return $desktopCopy('{hours} hr {minutes} min', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
     }
 </script>
 
-<section class="activity-details" aria-label={`Details for ${entry.name}`}>
+<section class="activity-details" lang={$desktopLocale} aria-label={$desktopCopy('Details for {name}', { name: entry.name })}>
     {#if batch}
         <header class="batch-header">
             <div class="batch-title-row">
@@ -183,40 +192,40 @@
                     <div class="batch-actions">
                         {#if running}
                             <button type="button" class="pill" onclick={() => void setUploadsPaused(!$uploadsPaused)}>
-                                {#if $uploadsPaused}<PlayIcon size={14} aria-hidden="true" />{:else}<PauseIcon size={14} aria-hidden="true" />{/if}{$uploadsPaused ? 'Resume' : 'Pause'}
+                                {#if $uploadsPaused}<PlayIcon size={14} aria-hidden="true" />{:else}<PauseIcon size={14} aria-hidden="true" />{/if}{$uploadsPaused ? $desktopCopy('Resume') : $desktopCopy('Pause')}
                             </button>
-                            <button type="button" class="pill quiet" onclick={() => cancelTransfersInDirection('up')}><XIcon size={14} aria-hidden="true" />Cancel upload</button>
+                            <button type="button" class="pill quiet" onclick={() => cancelTransfersInDirection('up')}><XIcon size={14} aria-hidden="true" />{$desktopCopy('Cancel upload')}</button>
                         {/if}
-                        {#if paused}<button type="button" class="pill accent" onclick={() => void switchActiveChannel(batch.driveId)}>Open {batch.driveTitle}</button>{/if}
-                        {#if report}<button type="button" class="pill accent" onclick={() => reviewFailedUploads(report)}>Review failed files</button>{/if}
-                        {#if batch.status === 'queued'}<button type="button" class="pill quiet" onclick={() => removeQueuedUpload(batch.id)}><XIcon size={14} aria-hidden="true" />Remove from queue</button>{/if}
+                        {#if paused}<button type="button" class="pill accent" onclick={() => void switchActiveChannel(batch.driveId)}>{$desktopCopy('Open {drive}', { drive: batch.driveTitle })}</button>{/if}
+                        {#if report}<button type="button" class="pill accent" onclick={() => reviewFailedUploads(report)}>{$desktopCopy('Review failed files')}</button>{/if}
+                        {#if batch.status === 'queued'}<button type="button" class="pill quiet" onclick={() => removeQueuedUpload(batch.id)}><XIcon size={14} aria-hidden="true" />{$desktopCopy('Remove from queue')}</button>{/if}
                     </div>
                 {/if}
             </div>
             {#if running && transfer}
-                <div class="batch-progress" class:paused={$uploadsPaused} class:indeterminate={percent === null} role="progressbar" aria-label="Upload progress"
+                <div class="batch-progress" class:paused={$uploadsPaused} class:indeterminate={percent === null} role="progressbar" aria-label={$desktopCopy('Upload progress')}
                     aria-valuemin="0" aria-valuemax="100" aria-valuenow={percent === null ? undefined : Math.round(percent)}>
                     <span style={percent === null ? undefined : `width:${percent}%`}></span>
                 </div>
                 <div class="batch-figures"><span>{figures.left}</span><span>{figures.right}</span></div>
             {/if}
             {#if status}<p class="detail-status" data-tone={paused ? 'warning' : entry.status === 'Needs attention' ? 'danger' : undefined}>{status}</p>{/if}
-            {#if batch.status === 'queued'}<p class="detail-note">Keep TDrive open. Queued uploads are lost if it closes.</p>{/if}
-            {#if batch.restored && !report}<p class="detail-note">To retry, upload these files again.</p>{/if}
+            {#if batch.status === 'queued'}<p class="detail-note">{$desktopCopy('Keep TDrive open. Queued uploads are lost if it closes.')}</p>{/if}
+            {#if batch.restored && !report}<p class="detail-note">{$desktopCopy('To retry, upload these files again.')}</p>{/if}
         </header>
 
         <ActivityMessage title={entry.name} message={batch.error || ''} />
         {#if linkedJobs.length > 0}
-            <section class="files-section" aria-label="Upload recovery"><h4>Upload recovery</h4><p class="detail-note">Resume or discard the saved upload. The file list shows the first attempt.</p>{#each linkedJobs as job (job.jobId)}<ResumableUploadRow {job} />{/each}</section>
+            <section class="files-section" aria-label={$desktopCopy('Upload recovery')}><h4>{$desktopCopy('Upload recovery')}</h4><p class="detail-note">{$desktopCopy('Resume or discard the saved upload. The file list shows the first attempt.')}</p>{#each linkedJobs as job (job.jobId)}<ResumableUploadRow {job} />{/each}</section>
         {/if}
 
-        <section class="files-section" aria-label="Files in upload">
+        <section class="files-section" aria-label={$desktopCopy('Files in upload')}>
             {#if batch.files.length > 0}
                 {#if (batch.failedFileCount ?? 0) > batch.files.length}
-                    <p class="detail-note">Showing {batch.files.length.toLocaleString()} of {batch.failedFileCount?.toLocaleString()} failed files.</p>
+                    <p class="detail-note">{$desktopCopy('Showing {count} of {total} failed files.', { count: batch.files.length.toLocaleString($desktopLocale), total: (batch.failedFileCount ?? 0).toLocaleString($desktopLocale) })}</p>
                 {/if}
                 {#if chips.length}
-                    <div class="file-chips" role="group" aria-label="Show files">
+                    <div class="file-chips" role="group" aria-label={$desktopCopy('Show files')}>
                         {#each chips as chip (chip.filter)}
                             <button type="button" aria-pressed={fileFilter === chip.filter} onclick={() => chooseFilter(chip.filter)}>{chip.label}{#if chip.filter !== 'all'}<span>{chip.count.toLocaleString()}</span>{/if}</button>
                         {/each}
@@ -230,7 +239,7 @@
                                     <span class="folder-chevron" class:open={row.open} aria-hidden="true"><ChevronRightIcon size={14} /></span>
                                     <FolderIcon size={15} aria-hidden="true" />
                                     <span class="folder-path">{row.folder.split('/').join(' / ')}</span>
-                                    <span class="folder-counts">{folderCounts(row)}{#if row.failed}<span class="failed">{` · ${row.failed} failed`}</span>{/if}</span>
+                                    <span class="folder-counts">{folderCounts(row)}{#if row.failed}<span class="failed">{' · ' + $desktopCopy('{count} failed', { count: row.failed })}</span>{/if}</span>
                                 </button>
                             </li>
                         {:else}
@@ -247,70 +256,71 @@
                                     {/if}
                                 </span>
                                 <span class="file-status" class:failed={file.status === 'failed'}>
-                                    {#if file.status === 'done'}<CheckIcon size={15} strokeWidth={2.25} aria-hidden="true" /><span class="sr-only">Completed</span>{:else}{fileStatus(file)}{/if}
+                                    {#if file.status === 'done'}<CheckIcon size={15} strokeWidth={2.25} aria-hidden="true" /><span class="sr-only">{$desktopCopy('Completed')}</span>{:else}{fileStatus(file)}{/if}
                                 </span>
                                 {#if canCancel(file)}
-                                    <button type="button" class="file-cancel" aria-label={`Cancel ${file.name}`} onclick={() => cancelActivityFile(batch.id, file)}><XIcon size={14} aria-hidden="true" /></button>
+                                    <button type="button" class="file-cancel" aria-label={$desktopCopy('Cancel {name}', { name: file.name })} onclick={() => cancelActivityFile(batch.id, file)}><XIcon size={14} aria-hidden="true" /></button>
                                 {/if}
                                 {#if file.message && file.status === 'failed'}<p class="file-message">{file.message}</p>{/if}
                             </li>
                         {/if}
                     {/each}
                 </ul>
-                {#if unlisted > 0 && (fileFilter === 'all' || fileFilter === 'queued')}<p class="detail-note">{unlisted.toLocaleString()} more {unlisted === 1 ? 'file' : 'files'} will appear here as the upload reaches them.</p>{/if}
+                {#if unlisted > 0 && (fileFilter === 'all' || fileFilter === 'queued')}<p class="detail-note">{unlisted === 1 ? $desktopCopy('{count} more file will appear here as the upload reaches them.', { count: unlisted.toLocaleString($desktopLocale) })
+                    : $desktopCopy('{count} more files will appear here as the upload reaches them.', { count: unlisted.toLocaleString($desktopLocale) })}</p>{/if}
                 {#if pageCount > 1}
-                    <div class="file-pagination" aria-label="File pages">
-                        <button type="button" disabled={currentPage === 0} onclick={() => filePage = currentPage - 1}>Previous files</button>
-                        <span>Page {currentPage + 1} of {pageCount}</span>
-                        <button type="button" disabled={currentPage >= pageCount - 1} onclick={() => filePage = currentPage + 1}>Next files</button>
+                    <div class="file-pagination" aria-label={$desktopCopy('File pages')}>
+                        <button type="button" disabled={currentPage === 0} onclick={() => filePage = currentPage - 1}>{$desktopCopy('Previous files')}</button>
+                        <span>{$desktopCopy('Page {page} of {total}', { page: currentPage + 1, total: pageCount })}</span>
+                        <button type="button" disabled={currentPage >= pageCount - 1} onclick={() => filePage = currentPage + 1}>{$desktopCopy('Next files')}</button>
                     </div>
                 {/if}
             {:else}
-                <p class="detail-note">{batch.status === 'active' || batch.status === 'queued' ? 'Each file appears here once it starts uploading.' : `${fileCountLabel(batch.fileCount)} in this upload.`}</p>
+                <p class="detail-note">{batch.status === 'active' || batch.status === 'queued' ? $desktopCopy('Each file appears here once it starts uploading.') : $desktopCopy('{files} in this upload.', { files: fileCountLabel(batch.fileCount, $desktopCopy) })}</p>
             {/if}
         </section>
     {:else}
         <div class="detail-heading">
-            <span class="detail-eyebrow">{entry.kind === 'sourceCopy' ? 'Copy' : entry.kind === 'download' || transfer?.direction === 'down' ? 'Download' : 'Upload'}</span>
+            <span class="detail-eyebrow">{entry.kind === 'sourceCopy' ? $desktopCopy('Copy') : entry.kind === 'download' || transfer?.direction === 'down' ? $desktopCopy('Download') : $desktopCopy('Upload')}</span>
             <h3>{entry.name}</h3>
             <p class="detail-status" data-tone={entry.status === 'Needs attention' ? 'danger' : undefined}>{status}</p>
         </div>
         {#if entry.kind === 'upload'}
             <ResumableUploadRow job={entry.job} />
             <dl>
-                {#if jobDrive}<div><dt>Drive</dt><dd>{jobDrive}</dd></div>{/if}
-                <div><dt>Uploaded</dt><dd>{formatSizePair(entry.job.confirmedBytes, entry.job.size)}</dd></div>
+                {#if jobDrive}<div><dt>{$desktopCopy('Drive')}</dt><dd>{jobDrive}</dd></div>{/if}
+                <div><dt>{$desktopCopy('Uploaded')}</dt><dd>{formatSizePair(entry.job.confirmedBytes, entry.job.size, $desktopCopy)}</dd></div>
             </dl>
             <ActivityMessage title={entry.name} message={entry.job.error} />
         {:else if entry.kind === 'download'}
             <ResumableDownloadRow job={entry.job} />
             <dl>
-                {#if jobDrive}<div><dt>Drive</dt><dd>{jobDrive}</dd></div>{/if}
-                <div><dt>Downloaded</dt><dd>{formatSizePair(entry.job.verifiedBytes, entry.job.totalBytes)}</dd></div>
-                {#if entry.job.savedPath}<div><dt>Saved to</dt><dd>{entry.job.savedPath}</dd></div>{/if}
+                {#if jobDrive}<div><dt>{$desktopCopy('Drive')}</dt><dd>{jobDrive}</dd></div>{/if}
+                <div><dt>{$desktopCopy('Downloaded')}</dt><dd>{formatSizePair(entry.job.verifiedBytes, entry.job.totalBytes, $desktopCopy)}</dd></div>
+                {#if entry.job.savedPath}<div><dt>{$desktopCopy('Saved to')}</dt><dd>{entry.job.savedPath}</dd></div>{/if}
             </dl>
             <ActivityMessage title={entry.name} message={entry.job.error} />
         {:else if entry.kind === 'sourceCopy'}
-            {#if entry.copy.message}<ActivityMessage title="Copy status" message={entry.copy.message} />{/if}
+            {#if entry.copy.message}<ActivityMessage title={$desktopCopy('Copy status')} message={entry.copy.message} />{/if}
             {#if entry.copy.status === 'pending'}
                 <button class="pill quiet" type="button" disabled={$activeCopyChecks.has(entry.copy.id)} onclick={() => void checkSourceCopy(entry.copy.id)}>
-                    {$activeCopyChecks.has(entry.copy.id) ? 'Checking…' : 'Check copy'}
+                    {$activeCopyChecks.has(entry.copy.id) ? $desktopCopy('Checking…') : $desktopCopy('Check copy')}
                 </button>
             {/if}
         {:else if transfer}
             {#if showTransfer}<TransferRow {transfer} onCancel={cancelTransfersInDirection} onCancelFile={cancelUploadFile} />{/if}
             <ActivityMessage title={entry.name} message={transfer.note || ''} />
-            {#if retry}<button type="button" class="pill" onclick={retry}>Retry download</button>{/if}
+            {#if retry}<button type="button" class="pill" onclick={retry}>{$desktopCopy('Retry download')}</button>{/if}
         {/if}
     {/if}
     {#if entry.kind === 'batch' || entry.kind === 'transfer'}
-        <section class="timeline" aria-label="Timeline">
-            <h4>Timeline</h4>
+        <section class="timeline" aria-label={$desktopCopy('Timeline')}>
+            <h4>{$desktopCopy('Timeline')}</h4>
             <dl>
-                {#if batch}<div><dt>Added</dt><dd>{activityTimestamp(batch.addedAt)}</dd></div>{/if}
-                {#if startedAt}<div><dt>Started</dt><dd>{activityTimestamp(startedAt)}</dd></div>{/if}
-                {#if finishedAt}<div><dt>Finished</dt><dd>{activityTimestamp(finishedAt)}</dd></div>{/if}
-                {#if elapsed !== null}<div><dt>{finishedAt ? 'Took' : 'Elapsed'}</dt><dd>{duration(elapsed)}</dd></div>{/if}
+                {#if batch}<div><dt>{$desktopCopy('Added')}</dt><dd>{activityTimestamp(batch.addedAt, $desktopLocale, $desktopCopy)}</dd></div>{/if}
+                {#if startedAt}<div><dt>{$desktopCopy('Started')}</dt><dd>{activityTimestamp(startedAt, $desktopLocale, $desktopCopy)}</dd></div>{/if}
+                {#if finishedAt}<div><dt>{$desktopCopy('Finished')}</dt><dd>{activityTimestamp(finishedAt, $desktopLocale, $desktopCopy)}</dd></div>{/if}
+                {#if elapsed !== null}<div><dt>{finishedAt ? $desktopCopy('Took') : $desktopCopy('Elapsed')}</dt><dd>{duration(elapsed)}</dd></div>{/if}
             </dl>
         </section>
     {/if}

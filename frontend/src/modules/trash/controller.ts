@@ -11,6 +11,7 @@ import type { OperationResult } from '../../types';
 import { invalidateFolderIndex, state } from '../../state';
 import { clearSearch } from '../search';
 import { closeChannel } from '../../ui/channels/channel-store';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { renderTrashError, renderTrashRows } from './view';
 import { appActions } from '../app-actions';
 import { humanizeBackendError } from '../errors';
@@ -81,7 +82,7 @@ export async function loadTrash(): Promise<void> {
 
 export async function restoreEntry(objectId: string): Promise<void> {
     const channelId = Number(state.activeChannel?.id ?? 0);
-    if (await mutate(objectId, 'Could not restore from the Trash', () => restoreFromTrash(channelId, objectId))) {
+    if (await mutate(objectId, desktopText('Could not restore from the Trash'), () => restoreFromTrash(channelId, objectId))) {
         // The item is back in a folder the user may be looking at.
         invalidateFolderIndex();
         if (state.activeChannel?.id === channelId) {
@@ -99,7 +100,13 @@ export function askPurgeTrashEntry(entry: TrashEntry): void {
 }
 
 export function askEmptyTrash(): void {
-    trashConfirmModal.open({ kind: 'empty', summary: trashSummary(get(trashEntries)) });
+    const entries = get(trashEntries);
+    trashConfirmModal.open({
+        kind: 'empty',
+        summary: trashSummary(entries),
+        count: entries.length,
+        bytes: entries.reduce((total, entry) => total + entry.size, 0),
+    });
 }
 
 /**
@@ -112,13 +119,13 @@ export async function confirmTrashAction(): Promise<void> {
     trashConfirmModal.close();
     if (!target) return;
     if (target.kind === 'empty') {
-        if (await mutate(EMPTY_TRASH_KEY, 'Could not empty the Trash', emptyTrash)) {
+        if (await mutate(EMPTY_TRASH_KEY, desktopText('Could not empty the Trash'), emptyTrash)) {
             trashEntries.set([]);
             publishTrashRows();
         }
         return;
     }
-    if (await mutate(target.objectId, 'Could not delete permanently', () => deleteFromTrashPermanently(target.objectId))) {
+    if (await mutate(target.objectId, desktopText('Could not delete permanently'), () => deleteFromTrashPermanently(target.objectId))) {
         dropEntry(target.objectId);
     }
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { get } from 'svelte/store';
     import { tick } from 'svelte';
     import CheckIcon from '@lucide/svelte/icons/check';
@@ -117,9 +118,10 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="source-organization-modal"
     open={Boolean(request)}
-    title={editing ? (editing.id ? 'Rename group' : 'New group') : removing ? 'Delete group?' : source ? 'Move to group' : 'Source groups'}
+    title={editing ? (editing.id ? $desktopCopy("Rename group") : $desktopCopy("New group")) : removing ? $desktopCopy("Delete group?") : source ? $desktopCopy("Move to group") : $desktopCopy("Source groups")}
     titleId="source-organization-title"
     subtitle={!editing && !removing && source ? source.title : undefined}
     dismissible={!busy}
@@ -127,23 +129,23 @@
 >
     {#if editing}
         <form id="source-group-form" onsubmit={(event) => { event.preventDefault(); save(); }}>
-            <label class="field-label" for="source-group-name">Group name</label>
+            <label class="field-label" for="source-group-name">{$desktopCopy("Group name")}</label>
             <input id="source-group-name" type="text" autocomplete="off" maxlength={80} bind:value={name} disabled={busy} />
         </form>
     {:else if removing}
-        <p class="group-message">Sources in <strong>{removing.name}</strong> will return to Ungrouped.</p>
+        <p class="group-message">{$desktopCopy('Sources in {name} will return to Ungrouped.', { name: removing.name })}</p>
     {:else if data?.status === 'ready'}
         {#if source}
             <div class="group-list">
                 {#if currentGroup}
                     <button class="group-option" type="button" disabled={busy} onclick={() => move('')}>
-                        <span>Ungrouped</span>
+                        <span>{$desktopCopy("Ungrouped")}</span>
                     </button>
                 {/if}
                 {#each data.groups as group (group.id)}
                     <button
                         class="group-option" type="button" disabled={busy || currentGroup === group.id}
-                        aria-label={currentGroup === group.id ? `${group.name}, current group` : undefined}
+                        aria-label={currentGroup === group.id ? $desktopCopy("{name}, current group", { name: group.name }) : undefined}
                         onclick={() => move(group.id)}
                     >
                         <FolderIcon size={16} aria-hidden="true" />
@@ -153,7 +155,7 @@
                         {/if}
                     </button>
                 {:else}
-                    <p class="group-message">Create a group to organize this source.</p>
+                    <p class="group-message">{$desktopCopy("Create a group to organize this source.")}</p>
                 {/each}
             </div>
         {:else}
@@ -162,23 +164,23 @@
                     <li class="group-row">
                         <FolderIcon size={16} aria-hidden="true" />
                         <span>{group.name}</span>
-                        <button class="group-action" type="button" aria-label={`Rename ${group.name}`} onclick={() => { void startEditing(group); }}>
+                        <button class="group-action" type="button" aria-label={$desktopCopy("Rename {name}", { name: group.name })} onclick={() => { void startEditing(group); }}>
                             <PenLineIcon size={16} aria-hidden="true" />
                         </button>
-                        <button class="group-action" type="button" aria-label={`Delete ${group.name}`} onclick={() => { void startRemoving(group); }}>
+                        <button class="group-action" type="button" aria-label={$desktopCopy("Delete {name}", { name: group.name })} onclick={() => { void startRemoving(group); }}>
                             <Trash2Icon size={16} aria-hidden="true" />
                         </button>
                     </li>
                 {:else}
-                    <li class="group-message">No groups yet.</li>
+                    <li class="group-message">{$desktopCopy("No groups yet.")}</li>
                 {/each}
             </ul>
         {/if}
     {:else if data?.status === 'error'}
-        <p class="group-message" role="alert">Source groups did not load.</p>
-        <button class="secondary-btn" type="button" onclick={() => { if (request) void loadSourceOrganization(request.accountId, true); }}>Retry</button>
+        <p class="group-message" role="alert">{$desktopCopy("Source groups did not load.")}</p>
+        <button class="secondary-btn" type="button" onclick={() => { if (request) void loadSourceOrganization(request.accountId, true); }}>{$desktopCopy("Retry")}</button>
     {:else}
-        <p class="group-message" role="status">Loading source groups…</p>
+        <p class="group-message" role="status">{$desktopCopy("Loading source groups…")}</p>
     {/if}
     {#if error}
         <p class="group-error" role="alert">{error}</p>
@@ -186,17 +188,17 @@
 
     {#snippet actions()}
         {#if editing}
-            <button class="secondary-btn" type="button" disabled={busy} onclick={back}>Cancel</button>
+            <button class="secondary-btn" type="button" disabled={busy} onclick={back}>{$desktopCopy("Cancel")}</button>
             <button class="primary-btn" type="submit" form="source-group-form" disabled={busy || !name.trim()}>
-                {editing.id ? 'Save' : 'Create group'}
+                {editing.id ? $desktopCopy("Save") : $desktopCopy("Create group")}
             </button>
         {:else if removing}
-            <button id="source-group-cancel-delete" class="secondary-btn" type="button" disabled={busy} onclick={back}>Cancel</button>
-            <button class="primary-btn danger-btn" type="button" disabled={busy} onclick={remove}>Delete group</button>
+            <button id="source-group-cancel-delete" class="secondary-btn" type="button" disabled={busy} onclick={back}>{$desktopCopy("Cancel")}</button>
+            <button class="primary-btn danger-btn" type="button" disabled={busy} onclick={remove}>{$desktopCopy("Delete group")}</button>
         {:else}
-            <button class="secondary-btn" type="button" disabled={busy} onclick={close}>{source ? 'Cancel' : 'Done'}</button>
+            <button class="secondary-btn" type="button" disabled={busy} onclick={close}>{source ? $desktopCopy("Cancel") : $desktopCopy("Done")}</button>
             {#if data?.status === 'ready'}
-                <button class="primary-btn" type="button" disabled={busy} onclick={() => { void startEditing(); }}>New group</button>
+                <button class="primary-btn" type="button" disabled={busy} onclick={() => { void startEditing(); }}>{$desktopCopy("New group")}</button>
             {/if}
         {/if}
     {/snippet}

@@ -1,5 +1,6 @@
 // "Join shared drive" modal.
 
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { joinSharedDrive } from '../channels';
 import { notify, dismissNotification } from '../notifications';
 import { humanizeBackendError } from '../errors';
@@ -14,8 +15,8 @@ export async function submitJoinDrive(link: string): Promise<void> {
     const progressId = notify({
         id: 'joining-drive',
         level: 'info',
-        title: 'Joining drive…',
-        body: 'If the drive has lots of history, this can take a few seconds.',
+        title: desktopText('Joining drive…'),
+        body: desktopText('If the drive has lots of history, this can take a few seconds.'),
         spinner: true,
     });
     joinDriveModal.setBusy(true);
@@ -26,13 +27,13 @@ export async function submitJoinDrive(link: string): Promise<void> {
         if (result?.status === 'pending') {
             notify({
                 level: 'success',
-                title: 'Join request sent',
-                body: 'The drive will appear after an admin approves you.',
+                title: desktopText('Join request sent'),
+                body: desktopText('The drive will appear after an admin approves you.'),
             });
         } else {
             notify({
                 level: 'success',
-                title: 'Joined drive',
+                title: desktopText('Joined drive'),
                 body: result?.channel?.title ? String(result.channel.title) : '',
             });
         }
@@ -40,7 +41,7 @@ export async function submitJoinDrive(link: string): Promise<void> {
         dismissNotification(progressId);
         notify({
             level: 'error',
-            title: 'Could not join drive',
+            title: desktopText('Could not join drive'),
             body: humanizeBackendError(err),
         });
     } finally {

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import LockKeyholeIcon from '@lucide/svelte/icons/lock-keyhole';
     import UploadIcon from '@lucide/svelte/icons/upload';
     import ModalShell from './ModalShell.svelte';
@@ -15,11 +16,14 @@
     let wasOpen = false;
 
     const view = uploadOptionsModal.state;
-    const summary = $derived(
-        $view.payload?.count === 1 ? 'Upload 1 file' : `Upload ${$view.payload?.count ?? 0} files`,
-    );
-
-    const queuedTitle = $derived($view.payload?.count === 1 ? 'Add 1 file to the queue' : `Add ${$view.payload?.count ?? 0} files to the queue`);
+    const count = $derived($view.payload?.count ?? 0);
+    const displayCount = $derived($desktopLocale === 'en' ? String(count) : count.toLocaleString($desktopLocale));
+    const summary = $derived(count === 1
+        ? $desktopCopy('Upload 1 file')
+        : $desktopCopy('Upload {count} files', { count: displayCount }));
+    const queuedTitle = $derived(count === 1
+        ? $desktopCopy('Add 1 file to the queue')
+        : $desktopCopy('Add {count} files to the queue', { count: displayCount }));
 
     function confirm(): void {
         onConfirm({ encrypt: uploadMode === 'encrypt' });
@@ -35,6 +39,7 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="upload-options-modal"
     open={$view.open}
     title={$view.payload?.queued ? queuedTitle : summary}
@@ -47,29 +52,29 @@
     {#if $view.payload?.personal !== false}
         <!-- Two choices side by side, the way a segmented control reads; the
              one chosen explains itself underneath. -->
-        <div class="upload-mode" role="radiogroup" aria-label="Upload as">
+        <div class="upload-mode" role="radiogroup" aria-label={$desktopCopy('Upload as')}>
             <label class="upload-mode-option">
                 <input type="radio" name="upload-mode" value="plain" bind:group={uploadMode} />
                 <UploadIcon size={15} strokeWidth={2} aria-hidden="true" />
-                <span>Standard</span>
+                <span>{$desktopCopy('Standard')}</span>
             </label>
             <label class="upload-mode-option">
                 <input type="radio" name="upload-mode" value="encrypt" bind:group={uploadMode} />
                 <LockKeyholeIcon size={15} strokeWidth={2} aria-hidden="true" />
-                <span>Encrypted</span>
+                <span>{$desktopCopy('Encrypted')}</span>
             </label>
         </div>
         <p class="upload-mode-help">
             {uploadMode === 'encrypt'
-                ? 'File contents are encrypted with your password before they reach Telegram. Names and folders stay visible.'
-                : 'Files are stored on Telegram as they are.'}
-            TDrive remembers this; change it in Settings › Encryption.
+                ? $desktopCopy('File contents are encrypted with your password before they reach Telegram. Names and folders stay visible.')
+                : $desktopCopy('Files are stored on Telegram as they are.')}
+            {$desktopCopy('TDrive remembers this; change it in Settings › Encryption.')}
         </p>
     {/if}
 
     {#snippet actions()}
-        <button id="upload-options-cancel" class="secondary-btn" type="button" onclick={onCancel}>Cancel</button>
-        <button id="upload-options-confirm" class="primary-btn" type="button" onclick={confirm}>{$view.payload?.queued ? 'Add to queue' : 'Continue'}</button>
+        <button id="upload-options-cancel" class="secondary-btn" type="button" onclick={onCancel}>{$desktopCopy('Cancel')}</button>
+        <button id="upload-options-confirm" class="primary-btn" type="button" onclick={confirm}>{$view.payload?.queued ? $desktopCopy('Add to queue') : $desktopCopy('Continue')}</button>
     {/snippet}
 </ModalShell>
 

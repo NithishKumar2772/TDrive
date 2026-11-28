@@ -25,6 +25,7 @@ import {
     type SidebarActionMenuRequest,
 } from '../ui/sidebar/sidebar-store';
 import type { DriveChannel, PendingJoin } from '../types';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 
 export function activateSidebar(): () => void {
@@ -94,22 +95,22 @@ export async function handlePendingClick(inviteHash: string): Promise<void> {
         if (result?.status === 'joined') {
             notify({
                 level: 'success',
-                title: 'Request approved',
-                body: 'Joined the drive.',
+                title: desktopText('Request approved'),
+                body: desktopText('Joined the drive.'),
                 history: true,
             });
         } else {
             const lastError = result?.pending?.lastError.trim() ?? '';
             notify({
                 level: lastError ? 'error' : 'info',
-                title: lastError ? 'Could not check request' : 'Still waiting for approval',
+                title: lastError ? desktopText('Could not check request') : desktopText('Still waiting for approval'),
                 body: lastError,
             });
         }
     } catch (err) {
         notify({
             level: 'error',
-            title: 'Could not check request',
+            title: desktopText('Could not check request'),
             body: humanizeBackendError(err),
         });
     }
@@ -126,7 +127,7 @@ export function showSharedActionsMenu(request: SidebarActionMenuRequest, c: Driv
                 } catch (err) {
                     notify({
                         level: 'error',
-                        title: 'Could not get invite link',
+                        title: desktopText('Could not get invite link'),
                         body: humanizeBackendError(err),
                     });
                 }
@@ -141,7 +142,7 @@ export function showSharedActionsMenu(request: SidebarActionMenuRequest, c: Driv
                 } catch (err) {
                     notify({
                         level: 'error',
-                        title: 'Could not get approval link',
+                        title: desktopText('Could not get approval link'),
                         body: humanizeBackendError(err),
                     });
                 }
@@ -171,14 +172,14 @@ export function showPendingActionsMenu(request: SidebarActionMenuRequest, p: Pen
                     notify({
                         level: result?.status === 'joined' ? 'success' : (lastError ? 'error' : 'info'),
                         title: result?.status === 'joined'
-                            ? 'Request approved'
-                            : (lastError ? 'Could not check request' : 'Still waiting for approval'),
-                        body: result?.status === 'joined' ? 'Joined the drive.' : lastError,
+                            ? desktopText('Request approved')
+                            : (lastError ? desktopText('Could not check request') : desktopText('Still waiting for approval')),
+                        body: result?.status === 'joined' ? desktopText('Joined the drive.') : lastError,
                     });
                 } catch (err) {
                     notify({
                         level: 'error',
-                        title: 'Could not check request',
+                        title: desktopText('Could not check request'),
                         body: humanizeBackendError(err),
                     });
                 }
@@ -192,12 +193,12 @@ export function showPendingActionsMenu(request: SidebarActionMenuRequest, p: Pen
                     await removePendingJoin(p.inviteHash);
                     notify({
                         level: 'success',
-                        title: 'Pending request removed',
+                        title: desktopText('Pending request removed'),
                     });
                 } catch (err) {
                     notify({
                         level: 'error',
-                        title: 'Could not remove request',
+                        title: desktopText('Could not remove request'),
                         body: humanizeBackendError(err),
                     });
                 }

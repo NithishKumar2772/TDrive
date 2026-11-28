@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { untrack } from 'svelte';
     import CheckIcon from '@lucide/svelte/icons/check';
     import PlusIcon from '@lucide/svelte/icons/plus';
@@ -105,7 +106,7 @@
             return;
         }
         if (!source.available) {
-            addError = `${source.title} is unavailable to this account.`;
+            addError = $desktopCopy('{title} is unavailable to this account.', { title: source.title });
             return;
         }
         adding = sourceKey(source);
@@ -116,7 +117,10 @@
             onClose();
         } catch (error) {
             adding = null;
-            addError = `${source.title} could not be added. ${toAppError(error, { source: 'backend' }).message}`;
+            addError = $desktopCopy('{title} could not be added. {error}', {
+                title: source.title,
+                error: toAppError(error, { source: 'backend' }).message,
+            });
         }
     }
 
@@ -134,9 +138,15 @@
     }
 
     function handle(source: ChannelSource): string {
-        const details = [sourceHandle(source), sourcePeerLabel(source)];
-        if (source.protected) details.push('Protected');
-        if (!source.available) details.push('Unavailable');
+        const kind = source.peerKind === 'self' ? $desktopCopy('Saved Messages')
+            : source.peerKind === 'user' ? $desktopCopy('Direct message')
+            : source.peerKind === 'bot' ? $desktopCopy('Bot chat')
+            : source.peerKind === 'group' ? $desktopCopy('Group')
+            : source.peerKind === 'supergroup' ? $desktopCopy('Supergroup')
+            : $desktopCopy('Channel');
+        const details = source.username ? [sourceHandle(source), kind] : [kind];
+        if (source.protected) details.push($desktopCopy('Protected'));
+        if (!source.available) details.push($desktopCopy('Unavailable'));
         return details.filter((value, index, values) => values.indexOf(value) === index).join(' · ');
     }
 
@@ -149,7 +159,10 @@
         publicSource = null;
         try {
             const resolved = await resolvePublic(input);
-            if (resolved.peerKind !== 'channel') throw new Error('That link does not identify a public channel.');
+            if (resolved.peerKind !== 'channel') {
+                if (version === publicVersion) publicError = $desktopCopy('That link does not identify a public channel.');
+                return;
+            }
             if (version === publicVersion) publicSource = { ...resolved, publicUsername: resolved.username };
         } catch (error) {
             if (version === publicVersion) publicError = toAppError(error, { source: 'backend' }).message;
@@ -168,11 +181,12 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="channel-picker-modal"
     {open}
-    title="Add a source"
+    title={$desktopCopy("Add a source")}
     titleId="channel-picker-title"
-    subtitle="A chat you're in, or any public channel."
+    subtitle={$desktopCopy("A chat you're in, or any public channel.")}
     cardClass="channel-picker-card"
     initialFocus="#channel-picker-search"
     onClose={close}
@@ -185,10 +199,10 @@
             oninput={onSearchInput}
             onkeydown={onSearchKeydown}
             type="text"
-            placeholder="Search chats or paste a t.me link"
+            placeholder={$desktopCopy("Search chats or paste a t.me link")}
             autocomplete="off"
             spellcheck="false"
-            aria-label="Search chats or paste a t.me link"
+            aria-label={$desktopCopy("Search chats or paste a t.me link")}
             aria-controls="channel-picker-list"
             aria-invalid={publicError ? 'true' : undefined}
             aria-describedby={publicError ? 'channel-picker-lookup-error' : undefined}
@@ -209,7 +223,7 @@
                     type="button"
                     disabled={!publicSource.available || (adding !== null && !publicBusy)}
                     aria-busy={publicBusy}
-                    aria-label={publicBusy ? `Connecting ${publicSource.title}` : publicAdded ? `Open ${publicSource.title}, already connected` : publicSource.available ? `Connect ${publicSource.title}` : `${publicSource.title} is unavailable`}
+                    aria-label={publicBusy ? $desktopCopy("Connecting {title}", { title: publicSource.title }) : publicAdded ? $desktopCopy("Open {title}, already connected", { title: publicSource.title }) : publicSource.available ? $desktopCopy("Connect {title}", { title: publicSource.title }) : $desktopCopy("{title} is unavailable", { title: publicSource.title })}
                     onclick={() => { if (publicSource) void choose(publicSource); }}
                 >
                     <ChannelAvatar source={publicSource} {loadPhoto} />
@@ -221,11 +235,11 @@
                         {#if publicBusy}
                             <span class="channel-picker-spinner"></span>
                         {:else if publicAdded}
-                            <CheckIcon size={14} strokeWidth={2.5} />Connected
+                            <CheckIcon size={14} strokeWidth={2.5} />{$desktopCopy("Connected")}
                         {:else if publicSource.available}
                             <span class="channel-picker-plus"><PlusIcon size={14} strokeWidth={2.5} /></span>
                         {:else}
-                            Unavailable
+                            {$desktopCopy("Unavailable")}
                         {/if}
                     </span>
                 </button>
@@ -241,8 +255,8 @@
                         {#if resolvingPublic}<span class="channel-picker-spinner"></span>{:else}<LinkIcon size={16} strokeWidth={2} />{/if}
                     </span>
                     <span class="channel-picker-text">
-                        <span class="channel-picker-name">{resolvingPublic ? `Looking up ${lookup}…` : `Look up ${lookup}`}</span>
-                        <span class="channel-picker-handle">Public channel on Telegram</span>
+                        <span class="channel-picker-name">{resolvingPublic ? $desktopCopy("Looking up {lookup}…", { lookup: lookup }) : $desktopCopy("Look up {lookup}", { lookup: lookup })}</span>
+                        <span class="channel-picker-handle">{$desktopCopy("Public channel on Telegram")}</span>
                     </span>
                     {#if !resolvingPublic}<kbd class="channel-picker-key" aria-hidden="true">↵</kbd>{/if}
                 </button>
@@ -263,18 +277,18 @@
         {:else if candidates.status === 'error'}
             <div class="channel-picker-empty" role="alert">
                 {toAppError(candidates.error, { source: 'backend' }).message}
-                <button class="link-button" type="button" onclick={() => void load()}>Try again</button>
+                <button class="link-button" type="button" onclick={() => void load()}>{$desktopCopy("Try again")}</button>
             </div>
         {:else if candidates.sources.length === 0}
             {#if lookup === null}
-                <div class="channel-picker-empty">No joined sources yet. Your direct messages, bot chats, groups, and channels appear here when Telegram can access them. Paste a t.me link to add a public channel.</div>
+                <div class="channel-picker-empty">{$desktopCopy("No joined sources yet. Your direct messages, bot chats, groups, and channels appear here when Telegram can access them. Paste a t.me link to add a public channel.")}</div>
             {/if}
         {:else if visible.length === 0}
             {#if lookup === null}
-                <div class="channel-picker-empty">No chats match “{query.trim()}”. Paste a t.me link or @name to look up a public channel.</div>
+                <div class="channel-picker-empty">{$desktopCopy('No chats match “{query}”. Paste a t.me link or @name to look up a public channel.', { query: query.trim() })}</div>
             {/if}
         {:else}
-            {#if lookup !== null}<div class="channel-picker-section" aria-hidden="true">Your chats</div>{/if}
+            {#if lookup !== null}<div class="channel-picker-section" aria-hidden="true">{$desktopCopy("Your chats")}</div>{/if}
             {#each visible as source (sourceKey(source))}
                 {@const busy = adding === sourceKey(source)}
                 {@const inTDrive = isAdded(source)}
@@ -284,7 +298,7 @@
                     type="button"
                     disabled={!source.available || (adding !== null && !busy)}
                     aria-busy={busy}
-                    aria-label={inTDrive ? `Open ${source.title}, already connected` : source.available ? `Connect ${source.title}` : `${source.title} is unavailable`}
+                    aria-label={inTDrive ? $desktopCopy("Open {title}, already connected", { title: source.title }) : source.available ? $desktopCopy("Connect {title}", { title: source.title }) : $desktopCopy("{title} is unavailable", { title: source.title })}
                     onclick={() => void choose(source)}
                 >
                     <ChannelAvatar {source} {loadPhoto} />
@@ -296,9 +310,9 @@
                         {#if busy}
                             <span class="channel-picker-spinner"></span>
                         {:else if inTDrive}
-                            <CheckIcon size={14} strokeWidth={2.5} />Connected
+                            <CheckIcon size={14} strokeWidth={2.5} />{$desktopCopy("Connected")}
                         {:else if !source.available}
-                            Unavailable
+                            {$desktopCopy("Unavailable")}
                         {:else}
                             <span class="channel-picker-plus"><PlusIcon size={14} strokeWidth={2.5} /></span>
                         {/if}
@@ -309,12 +323,12 @@
     </div>
 
     {#if candidatesTruncated}
-        <p class="channel-picker-list-note">Telegram returned the first 1,000 chats from a folder. This search filters those results; a pasted @name or t.me link is looked up separately.</p>
+        <p class="channel-picker-list-note">{$desktopCopy("Telegram returned the first 1,000 chats from a folder. This search filters those results; a pasted @name or t.me link is looked up separately.")}</p>
     {/if}
 
     {#snippet actions()}
-        <p class="channel-picker-footnote">Looking up a link won't join the channel or send messages.</p>
-        <button class="secondary-btn" type="button" disabled={adding !== null} onclick={close}>Cancel</button>
+        <p class="channel-picker-footnote">{$desktopCopy("Looking up a link won't join the channel or send messages.")}</p>
+        <button class="secondary-btn" type="button" disabled={adding !== null} onclick={close}>{$desktopCopy("Cancel")}</button>
     {/snippet}
 </ModalShell>
 

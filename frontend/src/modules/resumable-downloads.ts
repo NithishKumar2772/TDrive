@@ -19,6 +19,7 @@ import { humanizeBackendError } from './errors';
 import { openEncryptionPasswordModal } from './modals/encryption-password';
 import { notify } from './notifications';
 import { markTransferDone, pushTransferStart, removeTransfer, setTransferNote, updateTransferProgress } from './notif-bell';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 let activeChannelId: number | null = null;
 let generation = 0;
@@ -219,7 +220,7 @@ export async function resumePausedDownload(jobId: string, quiet = false): Promis
     if (!job || starting.has(jobId)) return;
     const releaseRun = tryBeginDownloadRun();
     if (!releaseRun) {
-        if (!quiet) notify({ level: 'info', title: 'Another download is running', body: 'Pause it before resuming this download.' });
+        if (!quiet) notify({ level: 'info', title: desktopText('Another download is running'), body: desktopText('Pause it before resuming this download.') });
         return;
     }
     starting.add(jobId);
@@ -232,11 +233,11 @@ export async function resumePausedDownload(jobId: string, quiet = false): Promis
             } else return;
         }
         if (!result.result.ok && result.result.error.code !== 'canceled' && !quiet) {
-            notify({ level: 'error', title: 'Download could not continue', body: humanizeBackendError(result.result.error) });
+            notify({ level: 'error', title: desktopText('Download could not continue'), body: humanizeBackendError(result.result.error) });
         }
         await refreshResumableDownloads();
     } catch (error) {
-        if (!quiet) notify({ level: 'error', title: 'Download could not continue', body: humanizeBackendError(error) });
+        if (!quiet) notify({ level: 'error', title: desktopText('Download could not continue'), body: humanizeBackendError(error) });
     } finally {
         starting.delete(jobId);
         releaseRun();
@@ -251,7 +252,7 @@ async function runAction(jobId: string, action: (job: ResumableDownload) => Prom
         await action(job);
         await refreshResumableDownloads();
     } catch (error) {
-        notify({ level: 'error', title: 'Download could not be changed', body: humanizeBackendError(error) });
+        notify({ level: 'error', title: desktopText('Download could not be changed'), body: humanizeBackendError(error) });
     } finally {
         busy.delete(jobId);
     }

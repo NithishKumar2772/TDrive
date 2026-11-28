@@ -18,6 +18,7 @@ import { canSaveSourceMedia, MAX_SOURCE_COPY_SELECTION, type ChannelMediaItem, t
 import { switchActiveChannel } from './channels';
 import { humanizeBackendError } from './errors';
 import { notify, notifyAppError } from './notifications';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 interface CopyItem extends SourceCopyInput {
     originalName: string;
@@ -330,12 +331,12 @@ export async function checkSourceCopy(id: string): Promise<void> {
         if (result.status === 'saved') {
             const drive = state.channels.find(({ kind }) => kind === 'personal');
             if (drive) invalidateFolderIndex(drive.id);
-            notify({ level: 'success', title: 'Saved to My Drive', body: result.name });
+            notify({ level: 'success', title: desktopText('Saved to My Drive'), body: result.name });
         } else if (result.status === 'failed' || result.status === 'canceled') {
-            notify({ level: 'warning', title: 'Copy did not finish', body: result.message || result.name });
+            notify({ level: 'warning', title: desktopText('Copy did not finish'), body: result.message || result.name });
         }
     } catch (error) {
-        if (activation === session) notifyAppError(error, { title: 'Could not check the copy' });
+        if (activation === session) notifyAppError(error, { title: desktopText('Could not check the copy') });
     } finally {
         if (activation === session) activeCopyChecks.update((previous) => new Set([...previous].filter((entry) => entry !== id)));
     }

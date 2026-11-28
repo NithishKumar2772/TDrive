@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { onDestroy } from 'svelte';
     import ModalShell from './ModalShell.svelte';
     import { shareDriveModal } from './share-drive-modal-store';
@@ -12,8 +13,8 @@
     const link = $derived($view.payload?.link ?? '');
     const subtitle = $derived(
         $view.payload?.approvalRequired
-            ? 'People with this link can request access. An admin must approve them before they join.'
-            : 'Anyone with this link can join the drive.',
+            ? $desktopCopy('People with this link can request access. An admin must approve them before they join.')
+            : $desktopCopy('Anyone with this link can join the drive.'),
     );
 
     function close(): void {
@@ -63,9 +64,10 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="share-drive-modal"
     open={$view.open}
-    title="Invite link"
+    title={$desktopCopy("Invite link")}
     titleId="share-drive-title"
     {subtitle}
     initialFocus="#share-drive-copy"
@@ -75,14 +77,15 @@
     <div
         id="share-drive-link"
         class="share-drive-link"
-        aria-label="Shared drive invite link"
+        dir="ltr"
+        aria-label={$desktopCopy("Shared drive invite link")}
         bind:this={linkEl}
     >{link}</div>
 
     {#snippet actions()}
-        <button id="share-drive-close" class="secondary-btn" type="button" onclick={close}>Close</button>
+        <button id="share-drive-close" class="secondary-btn" type="button" onclick={close}>{$desktopCopy("Close")}</button>
         <button id="share-drive-copy" class="primary-btn" type="button" onclick={() => void copy()}>
-            {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'failed' ? 'Copy failed' : 'Copy link'}
+            {copyStatus === 'copied' ? $desktopCopy('Copied!') : copyStatus === 'failed' ? $desktopCopy('Copy failed') : $desktopCopy('Copy link')}
         </button>
     {/snippet}
 </ModalShell>

@@ -10,6 +10,7 @@ import { loadEncryptionStatus } from '../encryption';
 import { notify } from '../notifications';
 import { humanizeBackendError } from '../errors';
 import { encryptionSettingsModal } from '../../ui/modals/encryption-settings-modal-store';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 let generation = 0;
 
 function isCurrent(request: number): boolean {
@@ -48,7 +49,7 @@ export async function submitBiometricEnrollment(password: string): Promise<void>
     const view = get(encryptionSettingsModal.state);
     if (!view.open || view.busy || !view.payload?.biometric?.available) return;
     if (!password) {
-        encryptionSettingsModal.setError('Enter your encryption password to enable biometrics on this device.');
+        encryptionSettingsModal.setError(desktopText('Enter your encryption password to enable biometrics on this device.'));
         return;
     }
     await changeBiometricEnrollment(() => enableBiometricUnlock(password), true);
@@ -75,7 +76,7 @@ async function changeBiometricEnrollment(call: () => Promise<OperationResult>, e
             const body = humanizeBackendError(result.error);
             // Cleanup is actionable even when authentication was canceled and
             // its dialog closed. Never hide a surviving device enrollment.
-            notify({ level: 'error', title: 'Review biometric enrollment', body });
+            notify({ level: 'error', title: desktopText('Review biometric enrollment'), body });
             if (isCurrent(request)) {
                 encryptionSettingsModal.setError(body);
                 await refreshBiometricStatus(request);
@@ -89,7 +90,13 @@ async function changeBiometricEnrollment(call: () => Promise<OperationResult>, e
         }
         await refreshBiometricStatus(request);
         if (!isCurrent(request)) return;
-        notify({ level: 'success', title: enabling ? 'Biometric unlock enabled' : 'Biometric unlock disabled', body: enabling ? 'This device can unlock encrypted files for the current session. Keep your password for recovery.' : 'Use your encryption password to unlock future sessions.' });
+        notify({
+            level: 'success',
+            title: enabling ? desktopText('Biometric unlock enabled') : desktopText('Biometric unlock disabled'),
+            body: enabling
+                ? desktopText('This device can unlock encrypted files for the current session. Keep your password for recovery.')
+                : desktopText('Use your encryption password to unlock future sessions.'),
+        });
     } catch (err) {
         if (isCurrent(request)) encryptionSettingsModal.setError(humanizeBackendError(err));
     } finally {
@@ -111,15 +118,15 @@ export async function submitEncryptionSettings(
     if (!isCurrent(request) || get(encryptionSettingsModal.state).busy) return;
     encryptionSettingsModal.setError('');
     if (!currentPassword) {
-        encryptionSettingsModal.setError('Enter your current password.');
+        encryptionSettingsModal.setError(desktopText('Enter your current password.'));
         return;
     }
     if (newPassword.length < 8) {
-        encryptionSettingsModal.setError('Use at least 8 characters for the new password.');
+        encryptionSettingsModal.setError(desktopText('Use at least 8 characters for the new password.'));
         return;
     }
     if (newPassword !== confirmPassword) {
-        encryptionSettingsModal.setError('New passwords do not match.');
+        encryptionSettingsModal.setError(desktopText('New passwords do not match.'));
         return;
     }
 
@@ -136,8 +143,8 @@ export async function submitEncryptionSettings(
         cancelEncryptionSettings();
         notify({
             level: 'success',
-            title: 'Encryption password changed',
-            body: 'Use the new password for encrypted files from now on.',
+            title: desktopText('Encryption password changed'),
+            body: desktopText('Use the new password for encrypted files from now on.'),
         });
     } catch (err) {
         if (isCurrent(request)) encryptionSettingsModal.setError(humanizeBackendError(err));

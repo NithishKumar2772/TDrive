@@ -11,6 +11,7 @@ import { setSelectedFileRowKeys } from '../ui/file-list/row-state-store';
 import { fileListRowForElement } from '../ui/file-list/row-lookup';
 import { rangeSelectionKeys } from '../ui/file-list/keyboard';
 import type { FileCommandItem, FileListFileRow, FolderListRow } from '../ui/file-list/types';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 const SELECTABLE_ROW_SELECTOR = '.drive-row[data-type="folder"], .drive-row[data-type="file"]';
 const MAX_BULK_DOWNLOAD_ITEMS = 500;
@@ -335,8 +336,8 @@ export function openSelectedItemsDownload(): void {
     if (items.length > MAX_BULK_DOWNLOAD_ITEMS) {
         notify({
             level: 'warning',
-            title: 'Too many downloads',
-            body: `Select up to ${MAX_BULK_DOWNLOAD_ITEMS} items at a time.`,
+            title: desktopText('Too many downloads'),
+            body: desktopText('Select up to {count} items at a time.', { count: MAX_BULK_DOWNLOAD_ITEMS }),
         });
         return;
     }
@@ -349,8 +350,8 @@ export function openSelectedItemsDownload(): void {
     if (downloads.some(({ channelId }) => channelId === null)) {
         notify({
             level: 'error',
-            title: 'Download unavailable',
-            body: 'Refresh the drive and select the items again.',
+            title: desktopText('Download unavailable'),
+            body: desktopText('Refresh the drive and select the items again.'),
         });
         return;
     }

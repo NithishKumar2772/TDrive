@@ -7,6 +7,7 @@ import { notify } from '../notifications';
 import { loadEncryptionStatus } from '../encryption';
 import { humanizeBackendError } from '../errors';
 import { encryptionSetupModal } from '../../ui/modals/encryption-setup-modal-store';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 let pending: ((ok: boolean) => void) | null = null;
 
 function finish(ok: boolean): void {
@@ -25,11 +26,11 @@ export function cancelEncryptionSetup(): void {
 
 export async function submitEncryptionSetup(password: string, confirmPassword: string, hint: string): Promise<void> {
     if (password.length < 8) {
-        encryptionSetupModal.setError('Use at least 8 characters.');
+        encryptionSetupModal.setError(desktopText('Use at least 8 characters.'));
         return;
     }
     if (password !== confirmPassword) {
-        encryptionSetupModal.setError('Passwords don’t match.');
+        encryptionSetupModal.setError(desktopText('Passwords don’t match.'));
         return;
     }
 
@@ -45,8 +46,8 @@ export async function submitEncryptionSetup(password: string, confirmPassword: s
         finish(true);
         notify({
             level: 'success',
-            title: 'Encryption password created',
-            body: 'Encrypted uploads will be protected before they leave this device.',
+            title: desktopText('Encryption password created'),
+            body: desktopText('Encrypted uploads will be protected before they leave this device.'),
         });
     } catch (err) {
         encryptionSetupModal.setError(humanizeBackendError(err));

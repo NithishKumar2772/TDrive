@@ -52,6 +52,7 @@ import {
 } from '../ui/app/app-store';
 import { parseDriveScanProgress, personalDriveSetup } from '../ui/auth/personal-drive-store';
 import { setFailedUploadHistoryAccount } from '../ui/notifications/failed-upload-history';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 let personalDriveFlowVersion = 0;
 let uploadHistorySuspended = false;
@@ -121,8 +122,8 @@ async function showDashboardForFlow(flowVersion: number): Promise<void> {
         console.error('Drive list load failed:', err);
         notify({
             level: 'error',
-            title: 'Could not load your drive',
-            body: 'Your TDrive is configured, but its local view could not be opened. Try refreshing.',
+            title: desktopText('Could not load your drive'),
+            body: desktopText('Your TDrive is configured, but its local view could not be opened. Try refreshing.'),
         });
         return;
     }
@@ -146,8 +147,8 @@ async function showDashboardForFlow(flowVersion: number): Promise<void> {
         console.warn('Initial drive refresh failed:', err);
         notify({
             level: 'warning',
-            title: 'Drive refresh is unavailable',
-            body: 'Showing the local view. Check your connection and refresh again.',
+            title: desktopText('Drive refresh is unavailable'),
+            body: desktopText('Showing the local view. Check your connection and refresh again.'),
         });
     }
     if (!isCurrentPersonalDriveFlow(flowVersion)) return;
@@ -173,8 +174,8 @@ async function showDashboardForFlow(flowVersion: number): Promise<void> {
         console.warn('Encryption status load failed:', err);
         notify({
             level: 'warning',
-            title: 'Encryption status is unavailable',
-            body: 'Uploads stay unavailable until the drive status can be refreshed.',
+            title: desktopText('Encryption status is unavailable'),
+            body: desktopText('Uploads stay unavailable until the drive status can be refreshed.'),
         });
     }
     if (!isCurrentPersonalDriveFlow(flowVersion)) return;
@@ -450,7 +451,7 @@ export function connectAuthEvents(): () => void {
                 failAuthSubmission(flow, message);
                 return;
             }
-            notify({ level: 'error', title: 'Login failed', body: message });
+            notify({ level: 'error', title: desktopText('Login failed'), body: message });
         }),
         // The backend keeps this login attempt alive. Keep the entered code
         // visible so the user can correct it without requesting another code.

@@ -1,5 +1,6 @@
 import { closeMedia, isAndroidPlatform, isMobilePlatform, openExternalUrl, openOriginalImage } from '../../api';
 import { EDGE_GUARD_PX, trailingEdgeGuard } from '../../ui/file-list/swipe-actions';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { state } from '../../state';
 import { notify } from '../notifications';
 import { isEncryptionPasswordRequired } from '../errors';
@@ -290,7 +291,7 @@ function preparePreviewSurface(filename: string, { keepCurrentImage = false } = 
     if (!dom) return;
     hideLockedState();
     if (!keepCurrentImage) {
-        dom.filename.textContent = filename || "Preview";
+        dom.filename.textContent = filename || desktopText("Preview");
     }
     showPreviewLoading();
     dom.error.style.display = "none";
@@ -311,7 +312,7 @@ function renderPreviewError(message: string): void {
     const retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'preview-error-retry';
-    retry.textContent = 'Try again';
+    retry.textContent = desktopText('Try again');
     retry.addEventListener('click', () => {
         const item = activePreviewItem;
         if (!item || !isPreviewOpen()) return;
@@ -358,7 +359,7 @@ function showPreviewError(message: string, { keepCurrentImage = false } = {}) {
     dom.modal.classList.remove("is-preview-locked");
     hidePreviewProgress();
     if (!keepCurrentImage) resetImageSurface();
-    renderPreviewError(message || "Download failed");
+    renderPreviewError(message || desktopText("Download failed"));
     dom.modal.classList.add("is-preview-error");
     setChromeVisible(true);
     clearChromeHideTimer();
@@ -378,8 +379,8 @@ function showPreviewImage(src: string, alt: string, { keepLoading = false } = {}
     dom.error.style.display = "none";
     dom.error.textContent = "";
     dom.modal.classList.remove("is-preview-error");
-    dom.filename.textContent = alt || "Preview";
-    dom.image.alt = alt || "Preview";
+    dom.filename.textContent = alt || desktopText("Preview");
+    dom.image.alt = alt || desktopText("Preview");
     dom.image.src = src;
     dom.image.hidden = false;
     // The CSS layer transition promotes the original over its thumbnail in
@@ -395,7 +396,7 @@ function showPreviewThumbnail(src: string, alt: string): void {
     dom.thumbnail.alt = '';
     dom.thumbnail.src = src;
     dom.thumbnail.hidden = false;
-    dom.thumbnail.setAttribute('aria-label', `Thumbnail for ${alt}`);
+    dom.thumbnail.setAttribute('aria-label', desktopText('Thumbnail for {name}', { name: alt }));
     if (previewTransition.isRunning()) previewTransition.finishOpen(dom.thumbnail);
 }
 
@@ -421,16 +422,16 @@ function normalizePreviewError(err: unknown) {
     if (typeof err === "string" && err.trim()) return new Error(err.trim());
     const message = (err as { message?: unknown } | null | undefined)?.message;
     if (typeof message === "string" && message.trim()) return new Error(message.trim());
-    return new Error("Download failed");
+    return new Error(desktopText("Download failed"));
 }
 
 function showSelectionPreviewError(selection: PreviewSelection) {
     if (selection.reason === "multiple") {
-        flashStatus("Preview works with one image at a time");
+        flashStatus(desktopText("Preview works with one image at a time"));
         return;
     }
     if (selection.reason === "unsupported") {
-        flashStatus("TDrive cannot open this kind of file");
+        flashStatus(desktopText("TDrive cannot open this kind of file"));
     }
 }
 
@@ -440,7 +441,7 @@ function showSelectionPreviewError(selection: PreviewSelection) {
 function readyElements(): PreviewElements | null {
     if (els) return els;
     console.error("Preview modal is unavailable because setup did not complete.");
-    flashStatus("Preview unavailable");
+    flashStatus(desktopText("Preview unavailable"));
     return null;
 }
 
@@ -526,8 +527,8 @@ export async function loadPreview(target: PreviewNavigationItem, { keepThumbnail
         activeFullSrc = opened.imagePreview ? '' : opened.url;
         showPreviewImage(opened.url, filename, { keepLoading: true });
         dom.image.title = opened.imagePreview
-            ? 'Resized preview. Download for original quality.'
-            : 'Original image';
+            ? desktopText('Resized preview. Download for original quality.')
+            : desktopText('Original image');
         refreshInfoPanel();
         return { src: opened.url };
     } catch (error) {
@@ -547,7 +548,7 @@ export async function loadPreview(target: PreviewNavigationItem, { keepThumbnail
         // than replacing it with the full error state.
         if (dom.thumbnail.getAttribute('src')) {
             hidePreviewProgress();
-            dom.image.title = 'Original image unavailable';
+            dom.image.title = desktopText('Original image unavailable');
             renderPreviewError(normalized.message);
         } else showPreviewError(normalized.message);
         return null;
@@ -725,7 +726,7 @@ async function navigatePreview(delta: number) {
         navigationPending = false;
         await openPreviewItem(item, findGalleryPreviewSource(item));
     } catch {
-        if (epoch === navigationEpoch && isPreviewOpen()) flashStatus('Could not load the next photo. Try again.');
+        if (epoch === navigationEpoch && isPreviewOpen()) flashStatus(desktopText('Could not load the next photo. Try again.'));
     } finally {
         if (epoch === navigationEpoch) {
             navigationPending = false;
@@ -1263,7 +1264,7 @@ export function activatePreviewModal(): () => void {
     listenPreview(dom.image, "error", (() => {
         if (isPreviewOpen() && dom.image.getAttribute("src")) {
             releaseOriginalSession();
-            showPreviewError("This photo could not be shown.", { keepCurrentImage: true });
+            showPreviewError(desktopText("This photo could not be shown."), { keepCurrentImage: true });
         }
     }) as EventListener);
     listenPreview(dom.image, "load", (() => {

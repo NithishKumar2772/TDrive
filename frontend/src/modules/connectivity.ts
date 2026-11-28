@@ -15,6 +15,7 @@
 import { writable } from 'svelte/store';
 import { appActions } from './app-actions';
 import { dismissNotification, notify } from './notifications';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 const OFFLINE_TOAST_ID = 'connectivity-offline';
 
@@ -36,8 +37,8 @@ export function reportOffline(): void {
     notify({
         id: OFFLINE_TOAST_ID,
         level: 'warning',
-        title: "You're offline",
-        body: 'Saved files are available. Reconnect to sync.',
+        title: desktopText('You\'re offline'),
+        body: desktopText('Saved files are available. Reconnect to sync.'),
     });
 }
 
@@ -48,11 +49,11 @@ export function reportOnline(): void {
     notify({
         id: OFFLINE_TOAST_ID,
         level: 'success',
-        title: 'Back online',
-        body: 'This folder may be out of date.',
+        title: desktopText('Back online'),
+        body: desktopText('This folder may be out of date.'),
         durationMs: 6000,
         action: {
-            label: 'Refresh',
+            label: desktopText('Refresh'),
             run: () => {
                 dismissNotification(OFFLINE_TOAST_ID);
                 void appActions().triggerRefresh();

@@ -9,6 +9,7 @@
  */
 
 import { formatBytes } from '../../utils';
+import { englishCopy, type DesktopTranslator } from '../i18n/desktop-copy';
 import type { TransferEvent, TransferItem } from './notif-store';
 
 /**
@@ -138,14 +139,15 @@ function secondsAtCurrentPace(transfer: TransferEvent, now: number): number | nu
 }
 
 /** "2 min left". Compact, because it shares a line with two other figures. */
-export function formatEta(seconds: number): string {
-    if (seconds < ETA_FLOOR_SECONDS) return 'Almost done';
-    if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+export function formatEta(seconds: number, desktopCopy: DesktopTranslator = englishCopy): string {
+    if (seconds < ETA_FLOOR_SECONDS) return desktopCopy('Almost done');
+    if (seconds < 60) return desktopCopy('{count}s left', { count: Math.ceil(seconds) });
     const minutes = Math.ceil(seconds / 60);
-    if (minutes < 60) return `${minutes} min left`;
+    if (minutes < 60) return desktopCopy('{count} min left', { count: minutes });
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return rest === 0 ? `${hours} hr left` : `${hours} hr ${rest} min left`;
+    return rest === 0 ? desktopCopy('{count} hr left', { count: hours })
+        : desktopCopy('{hours} hr {minutes} min left', { hours, minutes: rest });
 }
 
 /**
@@ -154,26 +156,26 @@ export function formatEta(seconds: number): string {
  * quantities where the person is looking at one, and costs a phone row width
  * it does not have.
  */
-export function formatSizePair(done: number, total: number): string {
+export function formatSizePair(done: number, total: number, desktopCopy: DesktopTranslator = englishCopy): string {
     const left = formatBytes(done);
     const right = formatBytes(total);
     const leftUnit = left.slice(left.lastIndexOf(' ') + 1);
     const rightUnit = right.slice(right.lastIndexOf(' ') + 1);
-    if (leftUnit && leftUnit === rightUnit) return `${left.slice(0, left.lastIndexOf(' '))} of ${right}`;
-    return `${left} of ${right}`;
+    const doneLabel = leftUnit && leftUnit === rightUnit ? left.slice(0, left.lastIndexOf(' ')) : left;
+    return desktopCopy('{done} of {total}', { done: doneLabel, total: right });
 }
 
 /** "2 min ago". Coarse on purpose: a finished transfer is history, not a clock. */
-export function formatAge(timestamp: number, now = Date.now()): string {
+export function formatAge(timestamp: number, now = Date.now(), desktopCopy: DesktopTranslator = englishCopy): string {
     if (!timestamp) return '';
     const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
-    if (seconds < 60) return 'just now';
+    if (seconds < 60) return desktopCopy('just now');
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} min ago`;
+    if (minutes < 60) return desktopCopy('{count} min ago', { count: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hr ago`;
+    if (hours < 24) return desktopCopy('{count} hr ago', { count: hours });
     const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
+    if (days < 7) return desktopCopy('{count}d ago', { count: days });
     return new Date(timestamp).toLocaleDateString();
 }
 
@@ -203,42 +205,42 @@ export function transferDetail(transfer: TransferEvent, now = Date.now()): strin
  * out for itself, which is how the two came to disagree about what a queued
  * transfer looks like.
  */
-export function transferDetailParts(transfer: TransferEvent, now = Date.now()): readonly TransferDetailPart[] {
+export function transferDetailParts(transfer: TransferEvent, now = Date.now(), desktopCopy: DesktopTranslator = englishCopy): readonly TransferDetailPart[] {
     const phase = transferPhase(transfer);
     switch (phase) {
-        case 'waiting': return [status('Waiting its turn')];
+        case 'waiting': return [status(desktopCopy('Waiting its turn'))];
         // The one thing that pauses a running transfer is iOS suspending the app
         // on the way to the background, so the row says why rather than leaving a
         // bare "Paused" that reads as something the user did.
-        case 'paused': return [status('Paused while TDrive was in the background')];
-        case 'preparing': return [status('Preparing…')];
-        case 'canceling': return [status('Stopping…')];
-        case 'canceled': return [status(terminal('Canceled', transfer.finishedAt, now))];
-        case 'stopped': return [status(terminal('Paused', transfer.finishedAt, now))];
-        case 'failed': return [status(terminal('Failed', transfer.finishedAt, now))];
-        case 'done': return [status(terminal('Done', transfer.finishedAt, now))];
+        case 'paused': return [status(desktopCopy('Paused while TDrive was in the background'))];
+        case 'preparing': return [status(desktopCopy('Preparing…'))];
+        case 'canceling': return [status(desktopCopy('Stopping…'))];
+        case 'canceled': return [status(terminal(desktopCopy('Canceled'), transfer.finishedAt, now, desktopCopy))];
+        case 'stopped': return [status(terminal(desktopCopy('Paused'), transfer.finishedAt, now, desktopCopy))];
+        case 'failed': return [status(terminal(desktopCopy('Failed'), transfer.finishedAt, now, desktopCopy))];
+        case 'done': return [status(terminal(desktopCopy('Done'), transfer.finishedAt, now, desktopCopy))];
         default: break;
     }
 
     const parts: TransferDetailPart[] = [];
     const items = transfer.itemsTotal || 0;
-    if (items > 0) parts.push(figure(`${transfer.itemsDone || 0} of ${items} files`));
-    if (transfer.total > 0) parts.push(figure(formatSizePair(transferredBytes(transfer), transfer.total)));
+    if (items > 0) parts.push(figure(desktopCopy('{done} of {total} files', { done: transfer.itemsDone || 0, total: items })));
+    if (transfer.total > 0) parts.push(figure(formatSizePair(transferredBytes(transfer), transfer.total, desktopCopy)));
     // A batch learns its size one file at a time, so it can say what it has
     // moved but not what that is out of. "1.2 GB so far" is that, and it is
     // still the figure that says how much work this is.
-    else if (transfer.bytes > 0) parts.push(figure(`${formatBytes(transfer.bytes)} so far`));
+    else if (transfer.bytes > 0) parts.push(figure(desktopCopy('{size} so far', { size: formatBytes(transfer.bytes) })));
     else if (items === 0) parts.push(figure(`${Math.round(transfer.progress || 0)}%`));
 
     const eta = etaSeconds(transfer, now);
-    if (eta !== null) parts.push(figure(formatEta(eta)));
+    if (eta !== null) parts.push(figure(formatEta(eta, desktopCopy)));
     if (transfer.speed > 0) parts.push({ kind: 'rate', text: `${formatBytes(transfer.speed)}/s` });
     return parts;
 }
 
 /** "Done · 2 min ago", or just "Done" before the clock has anything to add. */
-function terminal(label: string, finishedAt: number, now: number): string {
-    const age = formatAge(finishedAt, now);
+function terminal(label: string, finishedAt: number, now: number, desktopCopy: DesktopTranslator): string {
+    const age = formatAge(finishedAt, now, desktopCopy);
     return age ? `${label} · ${age}` : label;
 }
 
@@ -263,13 +265,14 @@ export function transferAriaLabel(transfer: TransferEvent, now = Date.now()): st
  * and repeating it as a number says nothing the row does not show -- and the
  * percentage only where no size arrived to say it any other way.
  */
-export function transferItemDetail(item: TransferItem): string {
+export function transferItemDetail(item: TransferItem, desktopCopy: DesktopTranslator = englishCopy): string {
     const percent = Math.max(0, Math.min(100, item.progress || 0));
     if (item.total <= 0) return `${Math.round(percent)}%`;
-    return formatSizePair((percent / 100) * item.total, item.total);
+    return formatSizePair((percent / 100) * item.total, item.total, desktopCopy);
 }
 
 /** Spoken description of one file's bar, which has no visible label of its own. */
-export function transferItemLabel(item: TransferItem): string {
-    return `${item.name || 'file'}, ${Math.round(Math.max(0, Math.min(100, item.progress || 0)))}%`;
+export function transferItemLabel(item: TransferItem, desktopCopy: DesktopTranslator = englishCopy): string {
+    const percent = Math.round(Math.max(0, Math.min(100, item.progress || 0)));
+    return desktopCopy('{name}, {percent}%', { name: item.name || desktopCopy('file'), percent });
 }

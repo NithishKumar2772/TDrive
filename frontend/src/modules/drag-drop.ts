@@ -13,6 +13,7 @@ import { notify } from './notifications';
 import { humanizeBackendError } from './errors';
 import { appActions } from './app-actions';
 import type { FileCommandItem } from '../ui/file-list/types';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 export function clearDropHighlights(): void {
     if (state.dragOverEl) {
@@ -87,7 +88,7 @@ export async function performDropMove(newParentId: string): Promise<void> {
     if (failures > 0) {
         notify({
             level: 'error',
-            title: failures === items.length ? 'Move failed' : `${failures} of ${items.length} moves failed`,
+            title: failures === items.length ? desktopText('Move failed') : desktopText('{count} of {length} moves failed', { count: failures, length: items.length }),
             body: lastError,
         });
     }

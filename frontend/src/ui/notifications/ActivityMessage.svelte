@@ -1,13 +1,14 @@
 <script lang="ts">
+    import { desktopCopy } from '../i18n/desktop-copy';
     interface Props { title: string; message: string }
     let { title, message }: Props = $props();
-    let copyState = $state('');
+    let copyState = $state<'copied' | 'failed' | null>(null);
     async function copy(): Promise<void> {
         try {
             await navigator.clipboard.writeText(`${title}\n${message}`);
-            copyState = 'Details copied';
+            copyState = 'copied';
         } catch {
-            copyState = 'Could not copy. Select the message to copy it manually.';
+            copyState = 'failed';
         }
     }
 </script>
@@ -15,8 +16,13 @@
 {#if message}
     <div class="message-block">
         <p class="activity-message">{message}</p>
-        <button type="button" class="notif-row-copy" onclick={() => void copy()}>Copy details</button>
-        {#if copyState}<p class="copy-status" role="status">{copyState}</p>{/if}
+        <button type="button" class="notif-row-copy" onclick={() => void copy()}>{$desktopCopy('Copy details')}</button>
+        {#if copyState}
+            <p class="copy-status" role="status">
+                {copyState === 'copied' ? $desktopCopy('Details copied')
+                    : $desktopCopy('Could not copy. Select the message to copy it manually.')}
+            </p>
+        {/if}
     </div>
 {/if}
 

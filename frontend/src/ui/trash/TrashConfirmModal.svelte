@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     /**
      * The one question asked before anything leaves the trash for good. It sits
      * over the trash dialog; modal-a11y treats nested dialogs as one stack, so
@@ -6,6 +7,7 @@
      */
     import FileIcon from '@lucide/svelte/icons/file';
     import FolderIcon from '@lucide/svelte/icons/folder';
+    import { formatBytes } from '../../utils';
     import ModalShell from '../modals/ModalShell.svelte';
     import { trashConfirmModal, type TrashConfirmation } from './trash-confirm-store';
 
@@ -30,20 +32,31 @@
     }
 
     function title(confirmation: TrashConfirmation): string {
-        return confirmation.kind === 'empty' ? 'Empty the trash?' : 'Delete permanently?';
+        return confirmation.kind === 'empty' ? $desktopCopy('Empty the trash?') : $desktopCopy('Delete permanently?');
     }
 
     function subtitle(confirmation: TrashConfirmation): string {
         if (confirmation.kind === 'empty') {
-            return `This deletes ${confirmation.summary || 'everything in the trash'} from Telegram right away. It can't be undone.`;
+            const { count, bytes } = confirmation;
+            let summary = confirmation.summary;
+            if ($desktopLocale !== 'en' && count) {
+                const items = count === 1
+                    ? $desktopCopy('1 item')
+                    : $desktopCopy('{count} items', { count: count.toLocaleString($desktopLocale) });
+                summary = bytes && bytes > 0 ? `${items} · ${formatBytes(bytes, $desktopLocale)}` : items;
+            }
+            return summary
+                ? $desktopCopy("This deletes {summary} from Telegram right away. It can't be undone.", { summary })
+                : $desktopCopy("This deletes everything in the trash from Telegram right away. It can't be undone.");
         }
         return confirmation.isFolder
-            ? "This deletes the folder and every file inside it from Telegram right away. It can't be undone."
-            : "This deletes the file from Telegram right away. It can't be undone.";
+            ? $desktopCopy("This deletes the folder and every file inside it from Telegram right away. It can't be undone.")
+            : $desktopCopy("This deletes the file from Telegram right away. It can't be undone.");
     }
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="trash-confirm-modal"
     open={$view.open}
     title={target ? title(target) : ''}
@@ -65,16 +78,16 @@
                 {/if}
             </span>
             <span class="trash-confirm-name" title={target.name}>{target.name}</span>
-            <span class="trash-confirm-kind">{target.isFolder ? 'Folder' : 'File'}</span>
+            <span class="trash-confirm-kind">{target.isFolder ? $desktopCopy("Folder") : $desktopCopy("File")}</span>
         </div>
     {/if}
 
     {#snippet actions()}
         <button id="trash-confirm-cancel" class="secondary-btn" type="button" disabled={$view.busy} onclick={close}>
-            Cancel
+            {$desktopCopy("Cancel")}
         </button>
         <button id="trash-confirm-accept" class="primary-btn danger-btn" type="button" disabled={$view.busy} onclick={confirm}>
-            {target?.kind === 'empty' ? 'Empty trash' : 'Delete permanently'}
+            {target?.kind === 'empty' ? $desktopCopy("Empty trash") : $desktopCopy("Delete permanently")}
         </button>
     {/snippet}
 </ModalShell>

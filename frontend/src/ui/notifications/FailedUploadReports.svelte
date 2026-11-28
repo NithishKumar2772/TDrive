@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import CircleXIcon from '@lucide/svelte/icons/circle-x';
     import XIcon from '@lucide/svelte/icons/x';
     import type { FailedUploadsPayload } from '../modals/failed-uploads-store';
@@ -14,16 +15,16 @@
 
     function summary(report: FailedUploadsPayload): string {
         const retryable = report.failures.filter((failure) => failure.retryable).length;
-        return retryable ? `${report.driveTitle} · ${retryable} ready to retry` : report.driveTitle;
+        return retryable ? $desktopCopy('{drive} · {count} ready to retry', { drive: report.driveTitle, count: retryable }) : report.driveTitle;
     }
 </script>
 
 {#if reports.length}
-    <section aria-label="Upload failures" class="failed-upload-reports" data-variant={variant}>
+    <section lang={$desktopLocale} aria-label={$desktopCopy('Upload failures')} class="failed-upload-reports" data-variant={variant}>
         {#if variant === 'mobile'}
-            <div class="transfers-section-head"><h2 class="mobile-section-label">Needs attention</h2></div>
+            <div class="transfers-section-head"><h2 class="mobile-section-label">{$desktopCopy('Needs attention')}</h2></div>
         {:else}
-            <h3 class="notif-section-label">Needs attention</h3>
+            <h3 class="notif-section-label">{$desktopCopy('Needs attention')}</h3>
         {/if}
         <div class={variant === 'mobile' ? 'transfers-group' : 'notif-section'} role="list">
             {#each reports as report (report)}
@@ -33,13 +34,15 @@
                     </span>
                     <div class="notif-row-body">
                         <div class="notif-row-title">
-                            {report.failures.length} {report.failures.length === 1 ? 'file' : 'files'} didn't upload
+                            {report.failures.length === 1
+                                ? $desktopCopy("{count} file didn't upload", { count: report.failures.length })
+                                : $desktopCopy("{count} files didn't upload", { count: report.failures.length })}
                         </div>
                         <div class="notif-row-sub">{summary(report)}</div>
                     </div>
                     <div class="failed-upload-actions">
-                        <button class="failed-upload-review" type="button" aria-label="Review failed files" onclick={() => onReview(report)}>Review</button>
-                        <button class="notif-row-cancel" type="button" aria-label={`Dismiss failed files in ${report.driveTitle}`} onclick={() => onDismiss(report)}>
+                        <button class="failed-upload-review" type="button" aria-label={$desktopCopy('Review failed files')} onclick={() => onReview(report)}>{$desktopCopy('Review')}</button>
+                        <button class="notif-row-cancel" type="button" aria-label={$desktopCopy('Dismiss failed files in {drive}', { drive: report.driveTitle })} onclick={() => onDismiss(report)}>
                             <XIcon size={14} strokeWidth={2} aria-hidden="true" />
                         </button>
                     </div>

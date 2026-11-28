@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy } from '../i18n/desktop-copy';
     import XIcon from '@lucide/svelte/icons/x';
     import { onMount, tick } from 'svelte';
     import { formatBytes } from '../../utils';
@@ -144,7 +145,7 @@
     data-playlist-panel
     data-state={playlist.open ? 'open' : 'closed'}
     role="region"
-    aria-label="Video playlist"
+    aria-label={$desktopCopy("Video playlist")}
     aria-labelledby="video-playlist-title"
     aria-hidden={playlist.open ? undefined : 'true'}
     tabindex="-1"
@@ -154,18 +155,19 @@
         <div class="video-popover-heading">
             <h2 id="video-playlist-title" class="video-popover-title video-playlist-title">{playlist.title}</h2>
         </div>
-        <button class="video-popover-close video-playlist-close" type="button" aria-label="Close playlist" title="Close playlist" onclick={close}>
+        <button class="video-popover-close video-playlist-close" type="button" aria-label={$desktopCopy("Close playlist")} title={$desktopCopy("Close playlist")} onclick={close}>
             <XIcon size={16} strokeWidth={2} aria-hidden="true" />
         </button>
     </header>
 
-    <div class="video-popover-body video-playlist-list" aria-label="Videos in this playlist">
+    <div class="video-popover-body video-playlist-list" aria-label={$desktopCopy("Videos in this playlist")}>
         {#if playlist.items.length === 0}
-            <p class="video-playlist-empty">No videos in this folder.</p>
+            <p class="video-playlist-empty">{$desktopCopy("No videos in this folder.")}</p>
         {:else}
             {#each playlist.items as item, index (item.id)}
                 {@const active = playlist.currentIndex === index}
                 {@const switching = playlist.switchingId === item.id}
+                {@const details = { name: item.name, position: item.position, count: playlist.items.length, format: item.format, size: formatBytes(item.size) }}
                 <button
                     class="video-playlist-row"
                     class:is-active={active}
@@ -174,7 +176,9 @@
                     data-playlist-index={index}
                     data-playlist-id={item.id}
                     aria-current={active ? 'true' : undefined}
-                    aria-label={`${item.name}, ${item.position} of ${playlist.items.length}, ${item.format}, ${formatBytes(item.size)}${active ? ', currently playing' : ''}`}
+                    aria-label={active
+                        ? $desktopCopy('{name}, {position} of {count}, {format}, {size}, currently playing', details)
+                        : $desktopCopy('{name}, {position} of {count}, {format}, {size}', details)}
                     aria-busy={switching ? 'true' : undefined}
                     tabindex={index === tabbableIndex ? 0 : -1}
                     onclick={() => activateRow(index)}
@@ -203,12 +207,12 @@
 
     <div class="video-popover-footer">
         <label class="video-playlist-auto-next">
-            <span class="video-playlist-auto-next-label">Auto-next</span>
+            <span class="video-playlist-auto-next-label">{$desktopCopy("Auto-next")}</span>
             <input
                 class="video-playlist-switch"
                 type="checkbox"
                 role="switch"
-                aria-label="Auto-next"
+                aria-label={$desktopCopy("Auto-next")}
                 aria-checked={playlist.autoNext}
                 checked={playlist.autoNext}
                 onchange={changeAutoNext}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import BanIcon from '@lucide/svelte/icons/ban';
     import CircleXIcon from '@lucide/svelte/icons/circle-x';
     import ClockIcon from '@lucide/svelte/icons/clock';
@@ -22,12 +23,25 @@
     const retryCount = $derived(failures.filter((failure) => failure.retryable).length);
     const checkCount = $derived(failures.filter((failure) => statusFor(failure).tone === 'warning').length);
     const pages = $derived(Math.max(1, Math.ceil(failures.length / PAGE_SIZE)));
-    const driveTitle = $derived($view.payload?.driveTitle ?? 'the original drive');
-    const subtitle = $derived($view.payload?.importFiles && uploaded === 0
-        ? `Review these failed files from your folder upload to ${driveTitle}.`
-        : uploaded > 0
-        ? `${failures.length} of ${total} files didn't upload to ${driveTitle}. Files that uploaded won't be sent again.`
-        : `${failures.length} ${failures.length === 1 ? "file didn't" : "files didn't"} upload to ${driveTitle}.`);
+    const driveTitle = $derived($view.payload?.driveTitle ?? $desktopCopy('the original drive'));
+    const subtitle = $derived.by(() => {
+        const count = displayCount(failures.length);
+        if ($view.payload?.importFiles && uploaded === 0) {
+            return $desktopCopy('Review these failed files from your folder upload to {drive}.', { drive: driveTitle });
+        }
+        if (uploaded > 0) {
+            return $desktopCopy("{count} of {total} files didn't upload to {drive}. Files that uploaded won't be sent again.", {
+                count, total: displayCount(total), drive: driveTitle,
+            });
+        }
+        return failures.length === 1
+            ? $desktopCopy("1 file didn't upload to {drive}.", { drive: driveTitle })
+            : $desktopCopy("{count} files didn't upload to {drive}.", { count, drive: driveTitle });
+    });
+
+    function displayCount(count: number): string {
+        return $desktopLocale === 'en' ? String(count) : count.toLocaleString($desktopLocale);
+    }
     $effect(() => {
         if ($view.payload !== previousPayload) page = 0;
         previousPayload = $view.payload;
@@ -40,37 +54,52 @@
     // sends replace the transport error, which would otherwise invite a resend.
     function statusFor(failure: UploadFailure): Status {
         // The label already offers the retry, so drop the reason's own "Try again".
-        if (failure.retryable) return { tone: 'accent', label: 'Ready to retry', detail: humanizeBackendError(new Error(failure.message)).replace(/\s*Try again\.$/, ''), icon: RotateCcwIcon };
+        if (failure.retryable) return { tone: 'accent', label: $desktopCopy('Ready to retry'), detail: humanizeBackendError(new Error(failure.message)).replace(/\s*Try again\.$/, ''), icon: RotateCcwIcon };
         switch (failure.code) {
             case 'projection_pending':
-                return { tone: 'warning', label: 'Indexing', detail: 'Telegram accepted this file. It will appear after the next sync.', icon: ClockIcon };
+                return { tone: 'warning', label: $desktopCopy('Indexing'), detail: $desktopCopy('Telegram accepted this file. It will appear after the next sync.'), icon: ClockIcon };
             case 'outcome_unknown':
-                return { tone: 'warning', label: 'Not confirmed', detail: 'Telegram may have accepted this file. Check the folder before uploading it again.', icon: TriangleAlertIcon };
+                return { tone: 'warning', label: $desktopCopy('Not confirmed'), detail: $desktopCopy('Telegram may have accepted this file. Check the folder before uploading it again.'), icon: TriangleAlertIcon };
             case 'resumable_upload':
-                return { tone: 'info', label: 'Paused', detail: 'Use this upload’s Resume controls in Transfers.', icon: PauseIcon };
+                return { tone: 'info', label: $desktopCopy('Paused'), detail: $desktopCopy('Use this upload’s Resume controls in Transfers.'), icon: PauseIcon };
             case 'retry_started':
-                return { tone: 'info', label: 'Retry started', detail: 'A retry was already started. Review its result in Transfers.', icon: ClockIcon };
+                return { tone: 'info', label: $desktopCopy('Retry started'), detail: $desktopCopy('A retry was already started. Review its result in Transfers.'), icon: ClockIcon };
             case 'canceled':
-                return { tone: 'muted', label: 'Canceled', detail: 'This file was canceled.', icon: BanIcon };
+                return { tone: 'muted', label: $desktopCopy('Canceled'), detail: $desktopCopy('This file was canceled.'), icon: BanIcon };
             case 'empty_file':
-                return { tone: 'muted', label: 'Skipped', detail: "Empty files can't be uploaded.", icon: BanIcon };
+                return { tone: 'muted', label: $desktopCopy('Skipped'), detail: $desktopCopy("Empty files can't be uploaded."), icon: BanIcon };
             default:
-                return { tone: 'danger', label: 'Failed', detail: humanizeBackendError(new Error(failure.message)), icon: CircleXIcon };
+                return { tone: 'danger', label: $desktopCopy('Failed'), detail: humanizeBackendError(new Error(failure.message)), icon: CircleXIcon };
         }
     }
 </script>
 
-<ModalShell hostId="failed-uploads-modal" open={$view.open} title="Failed uploads" titleId="failed-uploads-title"
-    {subtitle} initialFocus="#retry-failed-uploads" restoreFocus="#file-list" onClose={onClose}>
+<ModalShell
+    lang={$desktopLocale}
+    hostId="failed-uploads-modal"
+    open={$view.open}
+    title={$desktopCopy('Failed uploads')}
+    titleId="failed-uploads-title"
+    {subtitle}
+    initialFocus="#retry-failed-uploads"
+    restoreFocus="#file-list"
+    onClose={onClose}
+>
     <div class="failed-upload-body">
     {#if $view.payload?.importInterruption}<p class="failed-upload-note">{$view.payload.importInterruption}</p>{/if}
     {#if retryCount > 0 || checkCount > 0}
         <div class="failed-upload-counts">
-            {#if retryCount > 0}<span class="failure-count" data-tone="accent">{retryCount} ready to retry</span>{/if}
-            {#if checkCount > 0}<span class="failure-count" data-tone="warning">{checkCount} {checkCount === 1 ? 'needs' : 'need'} checking</span>{/if}
+            {#if retryCount > 0}
+                <span class="failure-count" data-tone="accent">{$desktopCopy('{count} ready to retry', { count: displayCount(retryCount) })}</span>
+            {/if}
+            {#if checkCount > 0}
+                <span class="failure-count" data-tone="warning">
+                    {checkCount === 1 ? $desktopCopy('1 needs checking') : $desktopCopy('{count} need checking', { count: displayCount(checkCount) })}
+                </span>
+            {/if}
         </div>
     {/if}
-    <ul class="failed-upload-list" aria-label="Failed files">
+    <ul class="failed-upload-list" aria-label={$desktopCopy('Failed files')}>
         {#each failures.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) as failure (failure.index)}
             {@const status = statusFor(failure)}
             <li>
@@ -78,27 +107,33 @@
                     <status.icon size={14} strokeWidth={2} aria-hidden="true" />
                 </span>
                 <div class="failure-body">
-                    <span class="failure-name" title={failure.name}>{failure.name}</span>
+                    <span class="failure-name" title={failure.name} dir="auto">{failure.name}</span>
                     <span class="failure-detail"><span class="failure-label" data-tone={status.tone}>{status.label}</span> · {status.detail}</span>
                 </div>
             </li>
         {/each}
     </ul>
     {#if pages > 1}
-        <nav class="failed-upload-pages" aria-label="Failed files pages">
-            <span>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, failures.length)} of {failures.length}</span>
+        <nav class="failed-upload-pages" aria-label={$desktopCopy('Failed files pages')}>
+            <span>{$desktopCopy('{start}–{end} of {total}', {
+                start: displayCount(page * PAGE_SIZE + 1),
+                end: displayCount(Math.min((page + 1) * PAGE_SIZE, failures.length)),
+                total: displayCount(failures.length),
+            })}</span>
             <div class="page-buttons">
-                <button type="button" disabled={page === 0} onclick={() => page -= 1}>Previous</button>
-                <button type="button" disabled={page + 1 >= pages} onclick={() => page += 1}>Next</button>
+                <button type="button" disabled={page === 0} onclick={() => page -= 1}>{$desktopCopy('Previous')}</button>
+                <button type="button" disabled={page + 1 >= pages} onclick={() => page += 1}>{$desktopCopy('Next')}</button>
             </div>
         </nav>
     {/if}
     {#if $view.error}<p class="failed-upload-error" role="alert">{$view.error}</p>{/if}
     </div>
     {#snippet actions()}
-        <button class="secondary-btn" type="button" onclick={onClose}>Close</button>
+        <button class="secondary-btn" type="button" onclick={onClose}>{$desktopCopy('Close')}</button>
         <button id="retry-failed-uploads" class="primary-btn" type="button" disabled={retryCount === 0 || $view.busy} onclick={onRetry}>
-            Retry failed files{retryCount > 0 ? ` (${retryCount})` : ''}
+            {retryCount > 0
+                ? $desktopCopy('Retry failed files ({count})', { count: displayCount(retryCount) })
+                : $desktopCopy('Retry failed files')}
         </button>
     {/snippet}
 </ModalShell>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ModalShell from './ModalShell.svelte';
     import { closeLeaveDriveModalView, leaveDriveModalState, type LeaveDriveTarget } from './leave-drive-modal-store';
 
@@ -11,8 +12,8 @@
     const subtitle = $derived.by(() => {
         const title = $leaveDriveModalState.target?.title || '';
         return title
-            ? `Leave "${title}"? You can rejoin later with the invite link.`
-            : 'You can rejoin later with the invite link.';
+            ? $desktopCopy('Leave "{name}"? You can rejoin later with the invite link.', { name: title })
+            : $desktopCopy('You can rejoin later with the invite link.');
     });
 
     function canClose(): boolean {
@@ -32,9 +33,10 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="leave-drive-modal"
     open={$leaveDriveModalState.open}
-    title="Leave drive?"
+    title={$desktopCopy("Leave drive?")}
     titleId="leave-drive-title"
     {subtitle}
     initialFocus="#leave-drive-cancel"
@@ -49,7 +51,7 @@
             disabled={$leaveDriveModalState.inFlight}
             onclick={close}
         >
-            Cancel
+            {$desktopCopy("Cancel")}
         </button>
         <button
             id="leave-drive-confirm"
@@ -58,7 +60,7 @@
             disabled={$leaveDriveModalState.inFlight}
             onclick={confirm}
         >
-            Leave
+            {$desktopCopy("Leave")}
         </button>
     {/snippet}
 </ModalShell>

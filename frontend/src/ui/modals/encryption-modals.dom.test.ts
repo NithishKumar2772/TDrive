@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, tick, unmount } from 'svelte';
+import { setLocalePreference } from '../i18n/locale-store';
 import EncryptionPasswordModal from './EncryptionPasswordModal.svelte';
 import EncryptionSettingsModal from './EncryptionSettingsModal.svelte';
 import EncryptionSetupModal from './EncryptionSetupModal.svelte';
@@ -69,6 +70,26 @@ afterEach(async () => {
     for (const host of hosts.splice(0)) {
         host.remove();
     }
+    setLocalePreference('system');
+});
+
+it('localizes the password setup without changing what the person typed', () => {
+    setLocalePreference('en');
+    const host = createHost('encryption-setup-modal');
+    mounted.push(mount(EncryptionSetupModal, {
+        target: host,
+        props: { onCancel: vi.fn(), onSubmit: vi.fn() },
+    }));
+    encryptionSetupModal.open(null);
+    flushSync();
+    const password = enter(host, '#encryption-setup-password', 'example-1234');
+
+    setLocalePreference('hi');
+    flushSync();
+    expect(host.querySelector('[role="dialog"]')?.getAttribute('lang')).toBe('hi');
+    expect(host.querySelector('#encryption-setup-title')?.textContent).toBe('एन्क्रिप्शन पासवर्ड सेट करें');
+    expect(password.getAttribute('aria-label')).toBe('एन्क्रिप्शन पासवर्ड');
+    expect(password.value).toBe('example-1234');
 });
 
 describe('EncryptionPasswordModal secret lifecycle', () => {

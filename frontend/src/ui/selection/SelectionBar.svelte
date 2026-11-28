@@ -5,6 +5,7 @@
     import Trash2Icon from '@lucide/svelte/icons/trash-2';
     import XIcon from '@lucide/svelte/icons/x';
     import { formatBytes } from '../../utils';
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import { selectionBarState } from './selection-bar-store';
 
     interface SelectionBarProps {
@@ -17,47 +18,47 @@
 
     let { onDownload, onMove, onCopy, onDelete, onClear }: SelectionBarProps = $props();
 
-    const label = $derived($selectionBarState.count === 1
-        ? '1 selected'
-        : `${$selectionBarState.count} selected`);
-    const size = $derived($selectionBarState.bytes ? formatBytes($selectionBarState.bytes) : '');
+    const numberLocale = $derived($desktopLocale === 'en' ? undefined : $desktopLocale);
+    const count = $derived(numberLocale ? $selectionBarState.count.toLocaleString(numberLocale) : String($selectionBarState.count));
+    const label = $derived($desktopCopy('{count} selected', { count }));
+    const size = $derived($selectionBarState.bytes ? formatBytes($selectionBarState.bytes, numberLocale) : '');
 </script>
 
 <!-- Desktop: a floating pill with the count, total size and icon actions.
      Mobile: the host becomes a bottom action bar; the count and Done move to
      the top region owned by the shell, so the count and Clear are hidden here
      and the bulk actions show as labelled icons. -->
-<div id="selection-count" class="selection-count" role="status" aria-live="polite" aria-atomic="true">
+<div id="selection-count" class="selection-count" role="status" lang={$desktopLocale} aria-live="polite" aria-atomic="true">
     {label}{#if size}<span class="selection-size">{` · ${size}`}</span>{/if}
 </div>
-<div class="selection-actions" class:with-copy={Boolean(onCopy)}>
-    <button id="selection-download" class="selection-btn" type="button" title="Download" aria-label="Download" onclick={onDownload}>
+<div class="selection-actions" lang={$desktopLocale} class:with-copy={Boolean(onCopy)}>
+    <button id="selection-download" class="selection-btn" type="button" title={$desktopCopy('Download')} aria-label={$desktopCopy('Download')} onclick={onDownload}>
         <span class="selection-btn-icon" aria-hidden="true">
             <DownloadIcon size={22} strokeWidth={1.75} />
         </span>
-        <span class="selection-btn-label">Download</span>
+        <span class="selection-btn-label">{$desktopCopy('Download')}</span>
     </button>
-    <button id="selection-move" class="selection-btn" type="button" title="Move" aria-label="Move" onclick={onMove}>
+    <button id="selection-move" class="selection-btn" type="button" title={$desktopCopy('Move')} aria-label={$desktopCopy('Move')} onclick={onMove}>
         <span class="selection-btn-icon" aria-hidden="true">
             <FolderInputIcon size={22} strokeWidth={1.75} />
         </span>
-        <span class="selection-btn-label">Move</span>
+        <span class="selection-btn-label">{$desktopCopy('Move')}</span>
     </button>
     {#if onCopy}
-        <button class="selection-btn" type="button" title="Copy to My Drive" aria-label="Copy to My Drive" onclick={onCopy}>
+        <button class="selection-btn" type="button" title={$desktopCopy('Copy to My Drive')} aria-label={$desktopCopy('Copy to My Drive')} onclick={onCopy}>
             <span class="selection-btn-icon" aria-hidden="true">
                 <CopyIcon size={22} strokeWidth={1.75} />
             </span>
-            <span class="selection-btn-label">Copy to My Drive</span>
+            <span class="selection-btn-label">{$desktopCopy('Copy to My Drive')}</span>
         </button>
     {/if}
-    <button id="selection-delete" class="selection-btn danger" type="button" title="Move to Trash" aria-label="Delete" onclick={onDelete}>
+    <button id="selection-delete" class="selection-btn danger" type="button" title={$desktopCopy('Move to Trash')} aria-label={$desktopCopy('Delete')} onclick={onDelete}>
         <span class="selection-btn-icon" aria-hidden="true">
             <Trash2Icon size={22} strokeWidth={1.75} />
         </span>
-        <span class="selection-btn-label">Delete</span>
+        <span class="selection-btn-label">{$desktopCopy('Delete')}</span>
     </button>
-    <button id="selection-clear" class="selection-btn ghost" type="button" title="Clear selection" aria-label="Clear selection" onclick={onClear}>
+    <button id="selection-clear" class="selection-btn ghost" type="button" title={$desktopCopy('Clear selection')} aria-label={$desktopCopy('Clear selection')} onclick={onClear}>
         <XIcon size={18} strokeWidth={1.9} aria-hidden="true" />
     </button>
 </div>

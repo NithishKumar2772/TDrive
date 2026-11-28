@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import XIcon from '@lucide/svelte/icons/x';
+    import { desktopCopy } from '../i18n/desktop-copy';
 
     // The photo, video and document viewers share this bar: name and details
     // on the leading side, actions ending in the same close button. Each owner
@@ -42,7 +43,7 @@
     </div>
     <div class="viewer-actions">
         {@render actions?.()}
-        <button id={closeId} class="viewer-icon-btn viewer-close" type="button" aria-label={closeLabel} title="Close" onclick={onClose}>
+        <button id={closeId} class="viewer-icon-btn viewer-close" type="button" aria-label={closeLabel} title={$desktopCopy('Close')} onclick={onClose}>
             <XIcon strokeWidth={2.2} aria-hidden="true" />
         </button>
     </div>

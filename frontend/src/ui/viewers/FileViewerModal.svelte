@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import FileIcon from '@lucide/svelte/icons/file';
     import FileTextIcon from '@lucide/svelte/icons/file-text';
@@ -128,31 +129,39 @@
     function viewerLabel(): string {
         switch ($fileViewerState.kind) {
             case 'image':
-                return 'Image';
+                return $desktopCopy('Image');
             case 'audio':
-                return 'Audio';
+                return $desktopCopy('Audio');
             case 'pdf':
                 return 'PDF';
             case 'text':
-                return 'Text';
+                return $desktopCopy('Text');
             default:
-                return 'File';
+                return $desktopCopy('File');
         }
     }
 
     function viewerStatus(): string {
-        if ($fileViewerState.loading) return 'Opening';
-        if ($fileViewerState.error) return 'Unavailable';
-        if ($fileViewerState.kind === 'image') return imageError ? 'Unavailable' : imageLoading ? 'Opening image' : 'Ready';
-        if ($fileViewerState.kind === 'audio') return audioError ? 'Unavailable' : audioWaiting ? 'Buffering' : audioPaused ? 'Ready' : 'Playing';
-        if ($fileViewerState.kind === 'pdf') return pdfError ? 'Unavailable' : pdfLoading ? 'Opening PDF' : pdfPageCount ? `${pdfPageCount} pages` : 'Ready';
+        if ($fileViewerState.loading) return $desktopCopy('Opening');
+        if ($fileViewerState.error) return $desktopCopy('Unavailable');
+        if ($fileViewerState.kind === 'image') {
+            return imageError ? $desktopCopy('Unavailable') : imageLoading ? $desktopCopy('Opening image') : $desktopCopy('Ready');
+        }
+        if ($fileViewerState.kind === 'audio') {
+            return audioError ? $desktopCopy('Unavailable') : audioWaiting ? $desktopCopy('Buffering') : audioPaused ? $desktopCopy('Ready') : $desktopCopy('Playing');
+        }
+        if ($fileViewerState.kind === 'pdf') {
+            if (pdfError) return $desktopCopy('Unavailable');
+            if (pdfLoading) return $desktopCopy('Opening PDF');
+            if (pdfPageCount) return $desktopCopy('{count} pages', { count: pdfPageCount });
+        }
         if ($fileViewerState.kind === 'text') {
             const mode = currentTextMode();
-            if (textLoading && !textOffset) return mode === 'plain' ? 'Opening text' : 'Rendering preview';
-            if (mode === 'plain') return textDone ? textCompletionLabel() : textOffset ? 'Partial' : 'Ready';
-            return textDone && textOffset && textTotal > 0 && textOffset >= textTotal ? 'Preview ready' : textOffset ? 'Preview ready' : 'Ready';
+            if (textLoading && !textOffset) return mode === 'plain' ? $desktopCopy('Opening text') : $desktopCopy('Rendering preview');
+            if (mode === 'plain') return textDone ? textCompletionLabel() : textOffset ? $desktopCopy('Partial') : $desktopCopy('Ready');
+            if (textOffset) return $desktopCopy('Preview ready');
         }
-        return 'Ready';
+        return $desktopCopy('Ready');
     }
 
     function syncAudio(): void {
@@ -181,7 +190,7 @@
                 await audioEl.play();
                 audioError = '';
             } catch (error) {
-                audioError = String(error || 'Could not play audio');
+                audioError = String(error || $desktopCopy('Could not play audio'));
             }
         } else {
             audioEl.pause();
@@ -238,7 +247,7 @@
                 headers: { Range: `bytes=${offset}-${end}` },
             });
             if (!isTextResponseOK(response)) {
-                throw new Error(`Text request failed (${response.status})`);
+                throw new Error($desktopCopy('Text request failed ({status})', { status: response.status }));
             }
             const buffer = await response.arrayBuffer();
             if (generation !== textGeneration) return;
@@ -258,7 +267,7 @@
             textTotal = total;
             textDone = buffer.byteLength === 0 || !hasMore;
         } catch (error) {
-            if (generation === textGeneration) textError = String(error || 'Could not open text file');
+            if (generation === textGeneration) textError = String(error || $desktopCopy('Could not open text file'));
         } finally {
             if (generation === textGeneration) textLoading = false;
         }
@@ -277,7 +286,7 @@
                 headers: { Range: `bytes=0-${TEXT_MAX_BYTES - 1}` },
             });
             if (!isTextResponseOK(response)) {
-                throw new Error(`Text request failed (${response.status})`);
+                throw new Error($desktopCopy('Text request failed ({status})', { status: response.status }));
             }
             const buffer = await response.arrayBuffer();
             if (generation !== textGeneration) return;
@@ -303,7 +312,7 @@
             textTotal = total;
             textDone = buffer.byteLength === 0 || reachedFileEnd || reachedViewerCap;
         } catch (error) {
-            if (generation === textGeneration) textError = String(error || 'Could not open text file');
+            if (generation === textGeneration) textError = String(error || $desktopCopy('Could not open text file'));
         } finally {
             if (generation === textGeneration) textLoading = false;
         }
@@ -324,7 +333,7 @@
     }
 
     function textCompletionLabel(): string {
-        return textTotal > 0 && textOffset >= textTotal ? 'End of file' : 'Preview limit';
+        return textTotal > 0 && textOffset >= textTotal ? $desktopCopy('End of file') : $desktopCopy('Preview limit');
     }
 
     function currentTextMode(): TextViewerMode {
@@ -334,9 +343,12 @@
     function textProgressLabel(): string {
         const mode = currentTextMode();
         if (mode !== 'plain') return '';
-        if (textOffset > 0) return `${textOffset < 1024 ? `${textOffset} B` : `${(textOffset / 1024).toFixed(0)} KB`} loaded`;
+        if (textOffset > 0) {
+            const size = textOffset < 1024 ? `${textOffset} B` : `${(textOffset / 1024).toFixed(0)} KB`;
+            return $desktopCopy('{size} loaded', { size });
+        }
         if (!textLoading) return '';
-        return 'Opening text…';
+        return $desktopCopy('Opening text…');
     }
 
     function shouldShowMarkdownToggle(): boolean {
@@ -403,7 +415,7 @@
             }
             pdfLoading = false;
             pdfPageCount = 0;
-            pdfError = event.data.message || 'Could not open PDF';
+            pdfError = event.data.message || $desktopCopy('Could not open PDF');
         };
 
         window.addEventListener('message', handleMessage);
@@ -412,7 +424,7 @@
 </script>
 
 {#snippet markdownToggle()}
-    <div class="text-viewer-toggle" role="tablist" aria-label="Markdown view">
+    <div class="text-viewer-toggle" role="tablist" aria-label={$desktopCopy("Markdown view")}>
         <button
             class:active={markdownView === 'rendered'}
             type="button"
@@ -420,7 +432,7 @@
             aria-selected={markdownView === 'rendered'}
             onclick={() => { markdownView = 'rendered'; }}
         >
-            Preview
+            {$desktopCopy("Preview")}
         </button>
         <button
             class:active={markdownView === 'raw'}
@@ -429,19 +441,19 @@
             aria-selected={markdownView === 'raw'}
             onclick={() => { markdownView = 'raw'; }}
         >
-            Raw
+            {$desktopCopy("Raw")}
         </button>
     </div>
 {/snippet}
 
 {#snippet protectedBadge()}
     {#if $fileViewerState.protected}
-        <span class="file-viewer-protected" title="View only. Saving and forwarding are disabled.">Protected</span>
+        <span class="file-viewer-protected" title={$desktopCopy("View only. Saving and forwarding are disabled.")}>{$desktopCopy("Protected")}</span>
     {/if}
 {/snippet}
 
 {#snippet downloadButton()}
-    {#if !$fileViewerState.readOnly && !$fileViewerState.protected}<button class="viewer-icon-btn" type="button" onclick={onDownload} aria-label="Download" title="Download">
+    {#if !$fileViewerState.readOnly && !$fileViewerState.protected}<button class="viewer-icon-btn" type="button" onclick={onDownload} aria-label={$desktopCopy("Download")} title={$desktopCopy("Download")}>
         <DownloadIcon aria-hidden="true" />
     </button>{/if}
 {/snippet}
@@ -451,7 +463,7 @@
     <div class="file-viewer-head">
         <!-- Download leads and close trails, where the photo and video
              viewers put it; an empty slot keeps the name centred. -->
-        <ViewerTopBar class="file-viewer-topbar is-phone" titleId="file-viewer-title" title={$fileViewerState.title || 'Open file'} closeLabel="Close file" {onClose}>
+        <ViewerTopBar class="file-viewer-topbar is-phone" titleId="file-viewer-title" title={$fileViewerState.title || $desktopCopy("Open file")} closeLabel={$desktopCopy("Close file")} {onClose}>
             {#snippet leading()}
                 <span class="file-viewer-leading">{@render downloadButton()}</span>
             {/snippet}
@@ -464,7 +476,7 @@
         {/if}
     </div>
     {:else}
-    <ViewerTopBar class="file-viewer-topbar" titleId="file-viewer-title" title={$fileViewerState.title || 'Open file'} closeLabel="Close file" {onClose}>
+    <ViewerTopBar class="file-viewer-topbar" titleId="file-viewer-title" title={$fileViewerState.title || $desktopCopy("Open file")} closeLabel={$desktopCopy("Close file")} {onClose}>
         {#snippet leading()}
             <div class={`file-viewer-kind-mark is-${$fileViewerState.kind || 'file'}`} aria-hidden="true">
                 {#if $fileViewerState.kind === 'image'}
@@ -499,6 +511,7 @@
 {/snippet}
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="viewer-modal"
     open={$fileViewerState.open}
     titleId="file-viewer-title"
@@ -524,12 +537,12 @@
                             alt={$fileViewerState.title}
                             draggable={$fileViewerState.protected ? false : undefined}
                             onload={() => { imageLoading = false; }}
-                            onerror={() => { imageLoading = false; imageError = 'Could not load this image'; }}
+                            onerror={() => { imageLoading = false; imageError = $desktopCopy('Could not load this image'); }}
                         />
                     {/key}
-                    {#if imageLoading}<div class="source-image-loading" role="status">Opening image…</div>{/if}
+                    {#if imageLoading}<div class="source-image-loading" role="status">{$desktopCopy("Opening image…")}</div>{/if}
                 {:else}
-                    <div class="file-viewer-state" role="status">Opening image…</div>
+                    <div class="file-viewer-state" role="status">{$desktopCopy("Opening image…")}</div>
                 {/if}
             </div>
         {:else if $fileViewerState.kind === 'audio'}
@@ -548,7 +561,7 @@
                     onended={syncAudio}
                     onerror={() => {
                         audioWaiting = false;
-                        audioError = 'Could not load this audio stream';
+                        audioError = $desktopCopy('Could not load this audio stream');
                     }}
                 ></audio>
                 <div class="audio-hero">
@@ -557,16 +570,16 @@
                     </div>
                     <div class="audio-copy">
                         <div class="audio-title" title={$fileViewerState.title}>{$fileViewerState.title}</div>
-                        <div class="audio-subtitle">{audioError || (audioWaiting ? 'Buffering from Telegram' : audioPaused ? 'Ready to play' : 'Streaming audio')}</div>
+                        <div class="audio-subtitle">{audioError || (audioWaiting ? $desktopCopy("Buffering from Telegram") : audioPaused ? $desktopCopy("Ready to play") : $desktopCopy("Streaming audio"))}</div>
                     </div>
                 </div>
                 <div class="audio-timeline">
                     <span class="audio-time">{formatTime(audioCurrent)}</span>
-                    <input class="audio-seek" type="range" min="0" max={audioDuration || 0} step="0.1" value={audioCurrent} oninput={seekAudio} aria-label="Seek audio" />
+                    <input class="audio-seek" type="range" min="0" max={audioDuration || 0} step="0.1" value={audioCurrent} oninput={seekAudio} aria-label={$desktopCopy("Seek audio")} />
                     <span class="audio-time">{formatTime(audioDuration)}</span>
                 </div>
-                <div class="audio-controls" aria-label="Audio controls">
-                    <button class="audio-play" type="button" onclick={() => void toggleAudio()} aria-label={audioPaused ? 'Play audio' : 'Pause audio'}>
+                <div class="audio-controls" aria-label={$desktopCopy("Audio controls")}>
+                    <button class="audio-play" type="button" onclick={() => void toggleAudio()} aria-label={audioPaused ? $desktopCopy("Play audio") : $desktopCopy("Pause audio")}>
                         {#if audioPaused}
                             <PlayIcon fill="currentColor" aria-hidden="true" />
                         {:else}
@@ -574,14 +587,14 @@
                         {/if}
                     </button>
                     <div class="audio-volume-group">
-                        <button class="audio-mute" type="button" onclick={toggleAudioMute} aria-label={audioEl?.muted ? 'Unmute' : 'Mute'}>
+                        <button class="audio-mute" type="button" onclick={toggleAudioMute} aria-label={audioEl?.muted ? $desktopCopy("Unmute") : $desktopCopy("Mute")}>
                             {#if audioEl?.muted || audioVolume <= 0}
                                 <VolumeXIcon aria-hidden="true" />
                             {:else}
                                 <Volume2Icon aria-hidden="true" />
                             {/if}
                         </button>
-                        <input class="audio-volume" type="range" min="0" max="1" step="0.01" value={audioVolume} oninput={setAudioVolume} aria-label="Volume" />
+                        <input class="audio-volume" type="range" min="0" max="1" step="0.01" value={audioVolume} oninput={setAudioVolume} aria-label={$desktopCopy("Volume")} />
                     </div>
                 </div>
             </div>
@@ -593,11 +606,11 @@
                     <iframe
                         bind:this={pdfFrameEl}
                         class="pdf-frame"
-                        title={$fileViewerState.title || 'PDF viewer'}
+                        title={$fileViewerState.title || $desktopCopy("PDF viewer")}
                         src={pdfViewerFrameSrc($fileViewerState.url, Boolean($fileViewerState.protected))}
                     ></iframe>
                     {#if pdfLoading}
-                        <div class="pdf-frame-overlay" aria-live="polite">Opening PDF…</div>
+                        <div class="pdf-frame-overlay" aria-live="polite">{$desktopCopy("Opening PDF…")}</div>
                     {/if}
                 {/if}
             </div>
@@ -617,20 +630,20 @@
                             {@html textRenderedHtml}
                         </div>
                     {:else}
-                        <div class="file-viewer-state">{textLoading ? 'Rendering preview…' : 'No preview available'}</div>
+                        <div class="file-viewer-state">{textLoading ? $desktopCopy("Rendering preview…") : $desktopCopy("No preview available")}</div>
                     {/if}
                 </div>
                 {#if shouldShowTextFooter()}
                     <div class="text-viewer-footer">
                         <span>{textProgressLabel()}</span>
                         <button class="file-viewer-action" type="button" disabled={textLoading || textDone} onclick={() => void loadTextChunk()}>
-                            {textDone ? textCompletionLabel() : textLoading ? 'Loading…' : 'Load more'}
+                            {textDone ? textCompletionLabel() : textLoading ? $desktopCopy("Loading…") : $desktopCopy("Load more")}
                         </button>
                     </div>
                 {/if}
             </div>
         {:else}
-            <div class="file-viewer-state">Opening file…</div>
+            <div class="file-viewer-state">{$desktopCopy("Opening file…")}</div>
         {/if}
     </div>
 </ModalShell>

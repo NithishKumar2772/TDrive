@@ -10,6 +10,7 @@
 // components only render the stores and drive the open/close UI state.
 
 import { get } from 'svelte/store';
+import { desktopText } from '../ui/i18n/desktop-copy';
 import { state } from '../state';
 import { cancelDownload, cancelUpload, cancelUploadById } from '../api';
 import { clearDownloadSharePaths, forgetDownloadSharePath } from '../ui/mobile/mobile-shell-store';
@@ -383,7 +384,7 @@ export function cancelTransfersInDirection(direction: TransferDirection): void {
         void cancelDownload().catch(() => {
             state.cancelingDownload = false;
             restoreCanceledTransfers(canceling);
-            pushHistoryEvent({ level: 'error', title: 'Could not cancel download', body: 'Your download is still running.' });
+            pushHistoryEvent({ level: 'error', title: desktopText('Could not cancel download'), body: desktopText('Your download is still running.') });
         });
         return;
     }
@@ -393,7 +394,7 @@ export function cancelTransfersInDirection(direction: TransferDirection): void {
     void cancelUpload().catch(() => {
         state.cancelingUpload = false;
         restoreCanceledTransfers(canceling);
-        pushHistoryEvent({ level: 'error', title: 'Could not cancel uploads', body: 'Your uploads are still running.' });
+        pushHistoryEvent({ level: 'error', title: desktopText('Could not cancel uploads'), body: desktopText('Your uploads are still running.') });
     });
 }
 
@@ -408,7 +409,7 @@ export function cancelSingleUpload(uploadId: number): void {
     void cancelUploadById(uploadId).catch(() => {
         canceledUploads.delete(uploadId);
         restoreCanceledTransfers(canceling);
-        pushHistoryEvent({ level: 'error', title: 'Could not cancel upload', body: 'The upload is still running.' });
+        pushHistoryEvent({ level: 'error', title: desktopText('Could not cancel upload'), body: desktopText('The upload is still running.') });
     });
 }
 

@@ -9,6 +9,7 @@ import { loadEncryptionStatus } from '../encryption';
 import { humanizeBackendError } from '../errors';
 import { state } from '../../state';
 import { encryptionPasswordModal } from '../../ui/modals/encryption-password-modal-store';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 interface UnlockRequest {
     promise: Promise<boolean>;
     resolve: (ok: boolean) => void;
@@ -40,7 +41,7 @@ export async function submitEncryptionPassword(password: string): Promise<void> 
     const request = pending;
     if (!request || !isCurrent(request) || get(encryptionPasswordModal.state).busy) return;
     if (!password) {
-        encryptionPasswordModal.setError('Enter your encryption password.');
+        encryptionPasswordModal.setError(desktopText('Enter your encryption password.'));
         return;
     }
     encryptionPasswordModal.setError('');

@@ -9,6 +9,7 @@ import {
     type OperationResult,
 } from '../../api';
 import { invalidateFolderIndex } from '../../state';
+import { desktopText } from '../../ui/i18n/desktop-copy';
 import { callWithPasswordRetry } from './encryption-password';
 import { clearSelection } from '../selection';
 import { buildFolderIndex, collectDescendants } from '../folder-index';
@@ -48,10 +49,11 @@ async function ensureFileInTdriveSystem(target: FileCommandItem): Promise<void> 
 
 function moveTitle(target: FileCommandTarget): string {
     if (target.type === 'bulk') {
-        return target.items.length === 1 ? 'Move 1 item' : `Move ${target.items.length} items`;
+        const count = target.items.length;
+        return count === 1 ? desktopText('Move 1 item') : desktopText('Move {count} items', { count: String(count) });
     }
     const name = target.name.trim();
-    return name ? `Move "${name}"` : 'Move item';
+    return name ? desktopText('Move "{name}"', { name }) : desktopText('Move item');
 }
 
 async function browseTo(path: MoveFolderEntry[]): Promise<void> {
@@ -62,7 +64,7 @@ async function browseTo(path: MoveFolderEntry[]): Promise<void> {
     try {
         const contents = await getFolderContents(path[path.length - 1]?.id ?? '');
         folders = contents.folders
-            .map((folder) => ({ id: folder.id, name: folder.name || 'Folder' }))
+            .map((folder) => ({ id: folder.id, name: folder.name || desktopText('Folder') }))
             .sort((left, right) => left.name.localeCompare(right.name));
     } catch {
         folders = [];

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale, type DesktopTranslator } from '../i18n/desktop-copy';
     import { onDestroy, tick } from 'svelte';
     import { readable } from 'svelte/store';
     import { MediaQuery } from 'svelte/reactivity';
@@ -59,7 +60,7 @@
         return [...$uploadActivities, ...$failedUploadHistory.filter((batch) => !sessionIds.has(batch.id))];
     });
     const entries = $derived(activityEntries(batches, $visibleHistory, $resumableUploads, $resumableDownloads,
-        { allEvents: $historyEvents, activeDriveId, now: $clock, uploadsPaused: $uploadsPaused, sourceCopies: $sourceCopyActivity, checkingCopies: $activeCopyChecks }));
+        { allEvents: $historyEvents, activeDriveId, now: $clock, uploadsPaused: $uploadsPaused, sourceCopies: $sourceCopyActivity, checkingCopies: $activeCopyChecks, desktopCopy: $desktopCopy }));
     const transfers = $derived(entries.filter((entry) => (
         filter === 'All' || entry.status === filter ||
         (filter === 'Needs attention' && entry.kind === 'sourceCopy' && entry.copy.status === 'pending')
@@ -88,11 +89,11 @@
         const waiting = entries.filter((entry) => entry.status === 'Queued').length;
         const attention = entries.filter((entry) => entry.status === 'Needs attention').length;
         const parts = [
-            active ? `${active} in progress` : '',
-            waiting ? `${waiting} queued` : '',
-            attention ? `${attention} ${attention === 1 ? 'needs' : 'need'} attention` : '',
+            active ? $desktopCopy('{count} in progress', { count: active }) : '',
+            waiting ? $desktopCopy('{count} queued', { count: waiting }) : '',
+            attention ? (attention === 1 ? $desktopCopy('{count} needs attention', { count: attention }) : $desktopCopy('{count} need attention', { count: attention })) : '',
         ].filter(Boolean);
-        return parts.length ? parts.join(' · ') : 'Nothing in progress';
+        return parts.length ? parts.join(' · ') : $desktopCopy('Nothing in progress');
     });
     const canClear = $derived($historyEvents.some((entry) => entry.kind === 'event' || !['queued', 'active', 'paused', 'canceling'].includes(entry.status))
         || batches.some((entry) => entry.status !== 'queued' && entry.status !== 'active')
@@ -180,8 +181,26 @@
         if (entry.status !== 'Active' || (entry.kind !== 'batch' && entry.kind !== 'transfer') || !entry.transfer) return null;
         return transferPercent(entry.transfer);
     }
+    const filterLabels = $derived({
+        All: $desktopCopy('All'),
+        Active: $desktopCopy('Active'),
+        Queued: $desktopCopy('Queued'),
+        'Needs attention': $desktopCopy('Needs attention'),
+        History: $desktopCopy('History'),
+    });
+
+    function noticeLevelLabel(level: string, desktopCopy: DesktopTranslator): string {
+        switch (level) {
+            case 'info': return desktopCopy('info');
+            case 'success': return desktopCopy('success');
+            case 'warning': return desktopCopy('warning');
+            case 'error': return desktopCopy('error');
+            default: return level;
+        }
+    }
+
     function noticeSummary(notice: NoticeEvent): string {
-        const age = formatAge(notice.ts, $clock);
+        const age = formatAge(notice.ts, $clock, $desktopCopy);
         const repeats = (notice.repeats ?? 1) > 1 ? `×${notice.repeats}` : '';
         return [notice.body.split('\n')[0], repeats, age].filter(Boolean).join(' · ');
     }
@@ -189,16 +208,16 @@
 
 {#snippet heading()}
         <div class="activity-header">
-            <div class="activity-heading"><h2 id="activity-title">Activity</h2><p>{headline}</p></div>
+            <div class="activity-heading"><h2 id="activity-title">{$desktopCopy('Activity')}</h2><p>{headline}</p></div>
             <div class="header-actions">
                 {#if confirmingClear}
-                    <span class="clear-question">Clear finished items?</span>
-                    <button type="button" class="header-text-btn" onclick={() => confirmingClear = false}>Cancel</button>
-                    <button type="button" class="header-text-btn danger" onclick={clear}>Clear</button>
+                    <span class="clear-question">{$desktopCopy('Clear finished items?')}</span>
+                    <button type="button" class="header-text-btn" onclick={() => confirmingClear = false}>{$desktopCopy('Cancel')}</button>
+                    <button type="button" class="header-text-btn danger" onclick={clear}>{$desktopCopy('Clear')}</button>
                 {:else}
-                    <button type="button" class="header-text-btn" onclick={() => confirmingClear = true} disabled={!canClear}>Clear history</button>
+                    <button type="button" class="header-text-btn" onclick={() => confirmingClear = true} disabled={!canClear}>{$desktopCopy('Clear history')}</button>
                 {/if}
-                <button type="button" class="close-activity" aria-label="Close activity" onclick={closeActivity}><XIcon size={18} aria-hidden="true" /></button>
+                <button type="button" class="close-activity" aria-label={$desktopCopy('Close activity')} onclick={closeActivity}><XIcon size={18} aria-hidden="true" /></button>
             </div>
         </div>
 {/snippet}
@@ -206,31 +225,31 @@
 {#snippet content()}
     <div class="activity-body" class:stacked class:showing-details={showingDetails && count > 0}>
         <div class="activity-toolbar">
-            <div class="activity-tabs" role="tablist" tabindex="-1" aria-label="Activity type" onkeydown={tabKeydown}>
-                <button type="button" id="activity-tab-transfers" role="tab" aria-selected={tab === 'transfers'} aria-controls="activity-content" tabindex={tab === 'transfers' ? 0 : -1} onclick={() => selectTab('transfers')}>Transfers</button>
-                <button type="button" id="activity-tab-notifications" role="tab" aria-selected={tab === 'notifications'} aria-controls="activity-content" tabindex={tab === 'notifications' ? 0 : -1} onclick={() => selectTab('notifications')}>Notifications</button>
+            <div class="activity-tabs" role="tablist" tabindex="-1" aria-label={$desktopCopy('Activity type')} onkeydown={tabKeydown}>
+                <button type="button" id="activity-tab-transfers" role="tab" aria-selected={tab === 'transfers'} aria-controls="activity-content" tabindex={tab === 'transfers' ? 0 : -1} onclick={() => selectTab('transfers')}>{$desktopCopy('Transfers')}</button>
+                <button type="button" id="activity-tab-notifications" role="tab" aria-selected={tab === 'notifications'} aria-controls="activity-content" tabindex={tab === 'notifications' ? 0 : -1} onclick={() => selectTab('notifications')}>{$desktopCopy('Notifications')}</button>
             </div>
-            {#if tabHasItems || query}<label class="activity-search"><SearchIcon size={15} aria-hidden="true" /><input id="activity-search" type="search" aria-label="Search activity" placeholder={tab === 'transfers' ? 'Search files or destination' : 'Search notifications'} bind:value={query} oninput={() => { listPage = 0; showingDetails = false; }} /></label>{/if}
+            {#if tabHasItems || query}<label class="activity-search"><SearchIcon size={15} aria-hidden="true" /><input id="activity-search" type="search" aria-label={$desktopCopy('Search activity')} placeholder={tab === 'transfers' ? $desktopCopy('Search files or destination') : $desktopCopy('Search notifications')} bind:value={query} oninput={() => { listPage = 0; showingDetails = false; }} /></label>{/if}
         </div>
         <div id="activity-content" role="tabpanel" aria-labelledby={`activity-tab-${tab}`} class="activity-content" class:empty={count === 0}>
             <div class="activity-list-pane">
                 {#if tab === 'transfers' && (tabHasItems || filter !== 'All')}
-                    <div class="activity-filters" role="group" aria-label="Filter transfers">
-                        {#each ACTIVITY_FILTERS as option (option)}<button type="button" aria-pressed={filter === option} onclick={() => selectFilter(option)}>{option}</button>{/each}
+                    <div class="activity-filters" role="group" aria-label={$desktopCopy('Filter transfers')}>
+                        {#each ACTIVITY_FILTERS as option (option)}<button type="button" aria-pressed={filter === option} onclick={() => selectFilter(option)}>{filterLabels[option]}</button>{/each}
                     </div>
                     {#if (filter === 'All' || filter === 'Needs attention') && !query && orphanReports.length}
                         <div class="failure-reports"><FailedUploadReports reports={orphanReports} onReview={reviewFailedUploads} onDismiss={dismissFailedUploadReport} /></div>
                     {/if}
                 {/if}
                 {#if count === 0}
-                    <div class="activity-empty"><h3>{query || filter !== 'All' ? 'No matching activity' : tab === 'transfers' ? 'No transfers yet' : 'All caught up'}</h3><p>{query || filter !== 'All' ? 'Try another search or filter.' : tab === 'transfers' ? 'Uploads and downloads will appear here.' : 'Your notifications will appear here.'}</p></div>
+                    <div class="activity-empty"><h3>{query || filter !== 'All' ? $desktopCopy('No matching activity') : tab === 'transfers' ? $desktopCopy('No transfers yet') : $desktopCopy('All caught up')}</h3><p>{query || filter !== 'All' ? $desktopCopy('Try another search or filter.') : tab === 'transfers' ? $desktopCopy('Uploads and downloads will appear here.') : $desktopCopy('Your notifications will appear here.')}</p></div>
                 {:else}
-                    <ul class="activity-list" aria-label={tab === 'transfers' ? 'Transfers' : 'Notifications'}>
+                    <ul class="activity-list" aria-label={tab === 'transfers' ? $desktopCopy('Transfers') : $desktopCopy('Notifications')}>
                         {#if tab === 'transfers'}
                             {#each transfers.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE) as entry (entry.id)}
                                 {@const percent = entryPercent(entry)}
                                 {@const paused = entry.kind === 'batch' && isBatchPaused(entry.batch, activeDriveId)}
-                                <li><button type="button" class="activity-item" class:selected={selectedTransfer?.id === entry.id} aria-label={`View ${entry.name}`} aria-pressed={selectedTransfer?.id === entry.id} onclick={() => select(entry.id)}>
+                                <li><button type="button" class="activity-item" class:selected={selectedTransfer?.id === entry.id} aria-label={$desktopCopy('View {name}', { name: entry.name })} aria-pressed={selectedTransfer?.id === entry.id} onclick={() => select(entry.id)}>
                                     <span class="item-glyph" data-tone={entry.status === 'Needs attention' ? 'danger' : paused ? 'warning' : entry.status === 'Queued' ? 'muted' : 'accent'}>
                                         {#if entry.status === 'Queued'}<ClockIcon size={16} aria-hidden="true" />{:else if entry.kind === 'download' || (entry.kind === 'transfer' && entry.transfer.direction === 'down')}<ArrowDownIcon size={16} aria-hidden="true" />{:else if entry.kind === 'sourceCopy'}<CopyIcon size={16} aria-hidden="true" />{:else}<ArrowUpIcon size={16} aria-hidden="true" />{/if}
                                     </span>
@@ -243,23 +262,33 @@
                             {/each}
                         {:else}
                             {#each notices.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE) as notice (notice.id)}
-                                <li><button type="button" class="activity-item" class:selected={selectedNotice?.id === notice.id} aria-label={`View ${notice.title}`} aria-pressed={selectedNotice?.id === notice.id} onclick={() => select(notice.id)}>
+                                <li><button type="button" class="activity-item" class:selected={selectedNotice?.id === notice.id} aria-label={$desktopCopy('View {name}', { name: notice.title })} aria-pressed={selectedNotice?.id === notice.id} onclick={() => select(notice.id)}>
                                     <span class="item-glyph" data-tone={notice.level === 'error' ? 'danger' : notice.level === 'warning' ? 'warning' : 'accent'}><BellIcon size={16} aria-hidden="true" /></span>
                                     <span class="item-copy"><span class="item-title">{notice.title}</span><span class="item-summary clamp">{noticeSummary(notice)}</span></span>
                                 </button></li>
                             {/each}
                         {/if}
                     </ul>
-                    {#if listPageCount > 1}<div class="list-pagination"><button type="button" aria-label="Previous page" disabled={currentPage === 0} onclick={() => listPage = currentPage - 1}>Previous</button><span>{currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, count)} of {count}</span><button type="button" aria-label="Next page" disabled={currentPage === listPageCount - 1} onclick={() => listPage = currentPage + 1}>Next</button></div>{/if}
+                    {#if listPageCount > 1}<div class="list-pagination"><button type="button" aria-label={$desktopCopy('Previous page')} disabled={currentPage === 0} onclick={() => listPage = currentPage - 1}>{$desktopCopy('Previous')}</button><span>{$desktopCopy('{first}–{last} of {count}', { first: currentPage * PAGE_SIZE + 1, last: Math.min((currentPage + 1) * PAGE_SIZE, count), count })}</span><button type="button" aria-label={$desktopCopy('Next page')} disabled={currentPage === listPageCount - 1} onclick={() => listPage = currentPage + 1}>{$desktopCopy('Next')}</button></div>{/if}
                 {/if}
             </div>
             {#if count > 0}
                 <div class="activity-detail-pane">
-                    <button type="button" class="activity-back" onclick={backToList}><ArrowLeftIcon size={16} aria-hidden="true" /> Activity</button>
+                    <button type="button" class="activity-back" onclick={backToList}><ArrowLeftIcon size={16} aria-hidden="true" /> {$desktopCopy('Activity')}</button>
                     {#if tab === 'transfers' && selectedTransfer}
                         {#key selectedTransfer.id}<ActivityDetails entry={selectedTransfer} {activeDriveId} {queuedAhead} {uploadRunning} />{/key}
                     {:else if tab === 'notifications' && selectedNotice}
-                        {#key selectedNotice.id}<section class="notice-details" aria-label={`Details for ${selectedNotice.title}`}><span class="notice-level" data-level={selectedNotice.level}>{selectedNotice.level}</span><h3>{selectedNotice.title}</h3><time datetime={new Date(selectedNotice.ts).toISOString()}>{activityTimestamp(selectedNotice.ts)}</time><ActivityMessage title={selectedNotice.title} message={selectedNotice.body} />{#if (selectedNotice.repeats ?? 1) > 1}<p>Repeated {selectedNotice.repeats} times</p>{/if}</section>{/key}
+                        {#key selectedNotice.id}
+                            <section class="notice-details" aria-label={$desktopCopy('Details for {name}', { name: selectedNotice.title })}>
+                                <span class="notice-level" data-level={selectedNotice.level}>{noticeLevelLabel(selectedNotice.level, $desktopCopy)}</span>
+                                <h3>{selectedNotice.title}</h3>
+                                <time datetime={new Date(selectedNotice.ts).toISOString()}>{activityTimestamp(selectedNotice.ts, $desktopLocale, $desktopCopy)}</time>
+                                <ActivityMessage title={selectedNotice.title} message={selectedNotice.body} />
+                                {#if (selectedNotice.repeats ?? 1) > 1}
+                                    <p>{$desktopCopy('Repeated {count} times', { count: selectedNotice.repeats ?? 1 })}</p>
+                                {/if}
+                            </section>
+                        {/key}
                     {/if}
                 </div>
             {/if}
@@ -269,13 +298,13 @@
 
 {#if docked}
     {#if $activityView.open}
-        <div bind:this={panel} class="activity-panel" role="dialog" aria-modal="false" aria-labelledby="activity-title" tabindex="-1" use:dock onkeydown={onPanelKeydown}>
+        <div bind:this={panel} class="activity-panel" role="dialog" lang={$desktopLocale} aria-modal="false" aria-labelledby="activity-title" tabindex="-1" use:dock onkeydown={onPanelKeydown}>
             {@render heading()}
             {@render content()}
         </div>
     {/if}
 {:else}
-    <ModalShell hostId="activity-modal" open={$activityView.open} titleId="activity-title" cardClass="activity-card"
+    <ModalShell hostId="activity-modal" open={$activityView.open} titleId="activity-title" cardClass="activity-card" lang={$desktopLocale}
         presentation="dialog" initialFocus=".close-activity" restoreFocus={$activityView.restoreFocus} onClose={dismiss} header={heading}>
         {@render content()}
     </ModalShell>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ModalShell from '../modals/ModalShell.svelte';
     import { mountSelection } from './mount-selection-store';
 
@@ -6,17 +7,18 @@
 </script>
 
 <ModalShell
+    lang={$desktopLocale}
     hostId="mount-selection-modal"
     open={$view.open}
-    title="Choose drives to mount"
+    title={$desktopCopy("Choose drives to mount")}
     titleId="mount-selection-title"
-    subtitle="Selected drives appear together in one TDrive volume."
+    subtitle={$desktopCopy("Selected drives appear together in one TDrive volume.")}
     initialFocus=".mount-drive-choice input"
     restoreFocus="#profile-trigger"
     onClose={mountSelection.close}
 >
     <fieldset class="mount-drive-list">
-        <legend class="visually-hidden">Drives</legend>
+        <legend class="visually-hidden">{$desktopCopy("Drives")}</legend>
         {#each $view.drives as drive (drive.id)}
             <label class="mount-drive-choice">
                 <input
@@ -28,7 +30,7 @@
                 <span class="mount-drive-copy">
                     <span class="mount-drive-title">{drive.title}</span>
                     <span class="mount-drive-mode">
-                        {drive.kind === 'personal' ? 'Personal' : 'Shared · Read only'}
+                        {drive.kind === 'personal' ? $desktopCopy("Personal") : $desktopCopy("Shared · Read only")}
                     </span>
                 </span>
             </label>
@@ -42,7 +44,7 @@
             type="button"
             onclick={mountSelection.close}
         >
-            Cancel
+            {$desktopCopy("Cancel")}
         </button>
         <button
             id="mount-selection-confirm"
@@ -51,7 +53,7 @@
             disabled={$view.selectedIds.length === 0}
             onclick={mountSelection.confirm}
         >
-            Mount
+            {$desktopCopy("Mount")}
         </button>
     {/snippet}
 </ModalShell>

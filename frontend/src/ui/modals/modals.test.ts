@@ -6,6 +6,7 @@ import JoinRequestsModal from './JoinRequestsModal.svelte';
 import LeaveDriveModal from './LeaveDriveModal.svelte';
 import LogoutModal from './LogoutModal.svelte';
 import MoveModal from './MoveModal.svelte';
+import NewDriveModal from './NewDriveModal.svelte';
 import RenameModal from './RenameModal.svelte';
 import UploadOptionsModal from './UploadOptionsModal.svelte';
 import {
@@ -20,6 +21,8 @@ import { joinRequestsList, joinRequestsModal } from './join-requests-modal-store
 import { logoutModal } from './logout-modal-store';
 import { closeLeaveDriveModalView, openLeaveDriveModalView } from './leave-drive-modal-store';
 import { moveBrowse, moveModal, resetMoveBrowse } from './move-modal-store';
+import { newDriveModal } from './new-drive-modal-store';
+import { setLocalePreference } from '../i18n/locale-store';
 import { sidebarState } from '../sidebar/sidebar-store';
 import { uploadOptionsModal } from './upload-options-modal-store';
 
@@ -51,7 +54,23 @@ afterEach(() => {
     closeLeaveDriveModalView();
     moveModal.close();
     resetMoveBrowse('');
+    newDriveModal.close();
+    setLocalePreference('system');
     uploadOptionsModal.close();
+});
+
+describe('NewDriveModal', () => {
+    it('uses the selected desktop language for the shared-drive dialog', () => {
+        newDriveModal.open(null);
+        setLocalePreference('en');
+        expect(render(NewDriveModal, { props: { onSubmit: noop } }).body).toContain('New shared drive');
+
+        setLocalePreference('hi');
+        const { body } = render(NewDriveModal, { props: { onSubmit: noop } });
+
+        expect(body).toContain('lang="hi"');
+        expect(body).toContain('नई साझा ड्राइव');
+    });
 });
 
 describe('RenameModal', () => {

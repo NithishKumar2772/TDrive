@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { desktopCopy, desktopLocale } from '../i18n/desktop-copy';
     import ClockIcon from '@lucide/svelte/icons/clock';
     import XIcon from '@lucide/svelte/icons/x';
     import type { UploadActivity } from './upload-activity-store';
@@ -11,17 +12,17 @@
     const paused = $derived(isBatchPaused(batch, activeDriveId));
 </script>
 
-<div class="notif-row queued-upload-row" class:mobile role="listitem">
+<div class="notif-row queued-upload-row" class:mobile lang={$desktopLocale} role="listitem">
     <span class="notif-row-icon" aria-hidden="true"><ClockIcon size={14} strokeWidth={2} /></span>
     <div class="notif-row-body">
         <div class="notif-row-title"><button class="queued-upload-name" type="button" onclick={onOpen}>{batch.name}</button></div>
-        <div class="notif-row-sub" class:paused>{paused ? batchLabel(batch, [], activeDriveId) : `Queued · ${fileCountLabel(batch.fileCount)} · ${batch.destination}`}</div>
+        <div class="notif-row-sub" class:paused>{paused ? batchLabel(batch, [], activeDriveId, false, $desktopCopy) : $desktopCopy('Queued · {files} · {destination}', { files: fileCountLabel(batch.fileCount, $desktopCopy), destination: batch.destination })}</div>
     </div>
     <div class="queued-upload-actions">
         {#if paused}
-            <button class="queued-upload-open" type="button" onclick={() => void switchActiveChannel(batch.driveId)}>Open {batch.driveTitle}</button>
+            <button class="queued-upload-open" type="button" onclick={() => void switchActiveChannel(batch.driveId)}>{$desktopCopy('Open {drive}', { drive: batch.driveTitle })}</button>
         {/if}
-        <button class="notif-row-cancel" type="button" aria-label={`Remove ${batch.name} from queue`} onclick={() => removeQueuedUpload(batch.id)}>
+        <button class="notif-row-cancel" type="button" aria-label={$desktopCopy('Remove {name} from queue', { name: batch.name })} onclick={() => removeQueuedUpload(batch.id)}>
             <XIcon size={14} strokeWidth={2} aria-hidden="true" />
         </button>
     </div>

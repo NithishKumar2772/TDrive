@@ -15,6 +15,7 @@ import { linkResumableUpload } from './notif-bell';
 import { appActions } from './app-actions';
 import { tryWithTransferFlow, withTransferFlow } from './transfers';
 import { resumableUploads } from './resumable-upload-store';
+import { desktopText } from '../ui/i18n/desktop-copy';
 
 export { resumableUploads } from './resumable-upload-store';
 
@@ -210,7 +211,7 @@ async function runAction(jobId: string, action: () => Promise<void>): Promise<vo
     try {
         await action();
     } catch (error) {
-        notify({ level: 'error', title: 'Upload could not continue', body: humanizeBackendError(error) });
+        notify({ level: 'error', title: desktopText('Upload could not continue'), body: humanizeBackendError(error) });
     } finally {
         busy.delete(jobId);
         await refreshResumableUploads();
@@ -227,19 +228,19 @@ function startResume(jobId: string, chooseSource: boolean, checkingStatus = fals
             const paths = await selectFiles();
             if (paths.length === 0) return;
             if (paths.length !== 1) {
-                notify({ level: 'warning', title: 'Choose one file', body: 'Select the original file for this upload.' });
+                notify({ level: 'warning', title: desktopText('Choose one file'), body: desktopText('Select the original file for this upload.') });
                 return;
             }
             sourcePath = paths[0];
         }
         const result = await resumeResumableUpload(jobId, sourcePath);
         if (!result.result.ok && result.result.error.code !== 'canceled' && !checkingStatus) {
-            notify({ level: 'error', title: 'Upload could not continue', body: humanizeBackendError(result.result.error) });
+            notify({ level: 'error', title: desktopText('Upload could not continue'), body: humanizeBackendError(result.result.error) });
         }
         if (result.result.ok) appActions().refreshFiles();
     })
         .catch((error: unknown) => {
-            if (!checkingStatus) notify({ level: 'error', title: 'Upload could not continue', body: humanizeBackendError(error) });
+            if (!checkingStatus) notify({ level: 'error', title: desktopText('Upload could not continue'), body: humanizeBackendError(error) });
         })
         .finally(() => {
             starting.delete(jobId);
