@@ -6,11 +6,17 @@ export const LOCALE_STORAGE_KEY = 'tdrive.locale.v1';
 
 export function resolveLocale(preference: LocalePreference, systemLanguage?: string): Locale {
     if (preference !== 'system') return preference;
-    const normalized = (systemLanguage ?? '').toLowerCase().replace('_', '-');
-    if (normalized === 'zh-tw' || normalized === 'zh-hk' || normalized === 'zh-mo' || normalized === 'zh-hant' || normalized.startsWith('zh-hant-')) return 'zh-TW';
-    if (normalized === 'zh' || normalized.startsWith('zh-cn') || normalized.startsWith('zh-sg') ||
-        normalized === 'zh-hans' || normalized.startsWith('zh-hans-')) return 'zh-CN';
-    return 'en';
+    if (!systemLanguage) return 'en';
+
+    try {
+        const { language, script, region } = new Intl.Locale(systemLanguage.replace(/_/g, '-'));
+        if (language !== 'zh') return 'en';
+        if (script === 'Hant') return 'zh-TW';
+        if (script === 'Hans') return 'zh-CN';
+        return region === 'TW' || region === 'HK' || region === 'MO' ? 'zh-TW' : 'zh-CN';
+    } catch {
+        return 'en';
+    }
 }
 
 function readPreference(): LocalePreference {
